@@ -1,0 +1,324 @@
+﻿const PX_OUTLINE = '#261d2e';
+const PX_WALL_SLIM = '#f1f5f9';
+const PX_GLASS_WALL = '#7dd3fc';
+const PX_SHADOW = 'rgba(28, 20, 38, 0.20)';
+
+function snap2(v: number): number {
+  return Math.round(v / 2) * 2;
+}
+
+function pxRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fill: string
+) {
+  ctx.fillStyle = fill;
+  ctx.fillRect(snap2(x), snap2(y), Math.max(2, snap2(w)), Math.max(2, snap2(h)));
+}
+
+function pxBox(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fill: string,
+  outline = PX_OUTLINE,
+  borderPx = 2
+) {
+  const rx = snap2(x);
+  const ry = snap2(y);
+  const rw = Math.max(4, snap2(w));
+  const rh = Math.max(4, snap2(h));
+  const bp = Math.max(2, snap2(borderPx));
+  ctx.fillStyle = outline;
+  ctx.fillRect(rx, ry, rw, rh);
+  ctx.fillStyle = fill;
+  ctx.fillRect(rx + bp, ry + bp, rw - bp * 2, rh - bp * 2);
+}
+
+// ============================================================================
+// GERADORES DE PISO EM MALHA DE TILES 32x32 CLEAN
+// ============================================================================
+function fillCeramicTiles32x32(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  w: number,
+  h: number,
+  groutColor = '#b8c4d2',
+  tileFace = '#d2dce8',
+  tileHighlight = '#e2eaf3'
+) {
+  pxRect(ctx, x1, y1, w, h, groutColor);
+  for (let ty = y1; ty < y1 + h; ty += TILE_SIZE) {
+    for (let tx = x1; tx < x1 + w; tx += TILE_SIZE) {
+      const tw = Math.min(TILE_SIZE - 2, x1 + w - tx - 2);
+      const th = Math.min(TILE_SIZE - 2, y1 + h - ty - 2);
+      if (tw > 2 && th > 2) {
+        pxRect(ctx, tx + 2, ty + 2, tw, th, tileFace);
+        pxRect(ctx, tx + 2, ty + 2, tw, 2, tileHighlight);
+      }
+    }
+  }
+}
+
+function fillWoodTiles32x32(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  w: number,
+  h: number,
+  jointColor = '#7d5738',
+  plankA = '#9c744f',
+  plankB = '#a87f58',
+  highlight = '#b88f67'
+) {
+  pxRect(ctx, x1, y1, w, h, jointColor);
+  const plankH = TILE_SIZE / 2; // 16px altura por tábua, 32px largura
+  for (let ty = y1; ty < y1 + h; ty += plankH) {
+    const rowIdx = Math.floor((ty - y1) / plankH);
+    const offset = (rowIdx % 2) * (TILE_SIZE / 2);
+    for (let tx = x1 - offset; tx < x1 + w; tx += TILE_SIZE) {
+      const drawX = Math.max(x1, tx);
+      const drawW = Math.min(tx + TILE_SIZE - 2, x1 + w) - drawX;
+      if (drawW > 2) {
+        pxRect(
+          ctx,
+          drawX,
+          ty,
+          drawW,
+          plankH - 2,
+          (Math.floor(tx / TILE_SIZE) + rowIdx) % 2 === 0 ? plankA : plankB
+        );
+        pxRect(ctx, drawX, ty, drawW, 2, highlight);
+      }
+    }
+  }
+}
+
+// ============================================================================
+// OBJETOS MODULARES 32x32 CLEAN & FOCADOS
+// ============================================================================
+
+// Parede Frontal Interna Slim (16px de altura, limpa e elegante)
+function drawCleanHeaderWall(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  upperColor: string,
+  lowerColor: string
+) {
+  pxRect(ctx, x, y + 16, w, 4, PX_SHADOW);
+  pxRect(ctx, x, y, w, 10, upperColor);
+  pxRect(ctx, x, y + 10, w, 4, lowerColor);
+  pxRect(ctx, x, y + 14, w, 2, PX_OUTLINE);
+}
+
+// Planta Ornamental Compacta 32x32
+function drawCleanPlant(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  pxRect(ctx, x - 8, y + 4, 16, 4, PX_SHADOW);
+  pxBox(ctx, x - 6, y - 2, 12, 8, '#c88a4b', PX_OUTLINE, 2);
+  pxBox(ctx, x - 8, y - 12, 16, 10, '#24523b', PX_OUTLINE, 2);
+  pxRect(ctx, x - 6, y - 10, 12, 6, '#388047');
+  pxRect(ctx, x - 4, y - 10, 6, 4, '#63c74d');
+}
+
+// Totem Auto-Atendimento PIX / ATM Kiosk 32x32 (Sugestão Web Cyber Cafe!)
+function drawPixSelfServiceKiosk(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  pxRect(ctx, x - 9, y + 12, 18, 4, PX_SHADOW);
+  pxBox(ctx, x - 9, y - 14, 18, 28, '#1e293b', PX_OUTLINE, 2);
+  pxBox(ctx, x - 7, y - 10, 14, 12, '#0284c7', PX_OUTLINE, 2);
+  pxRect(ctx, x - 5, y - 8, 10, 8, '#38bdf8');
+  pxRect(ctx, x - 3, y - 6, 6, 4, '#ffffff'); // QR Code PIX na tela
+  pxRect(ctx, x - 5, y + 4, 10, 2, '#4ade80'); // Leitor de cartão/NFC
+}
+
+// Estação Ramen / Cup Noodles + Micro-ondas + Soda Dispenser (Sugestão Web Cyber Cafe!)
+function drawRamenAndMicrowaveStation(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  pxRect(ctx, x, y + 22, 64, 4, PX_SHADOW);
+  pxBox(ctx, x, y, 64, 24, '#c88a4b', PX_OUTLINE, 2);
+  pxRect(ctx, x + 2, y + 2, 60, 8, '#e8c482');
+  // Micro-ondas digital (esquerda)
+  pxBox(ctx, x + 4, y - 8, 20, 12, '#e2e8f0', PX_OUTLINE, 2);
+  pxRect(ctx, x + 6, y - 6, 10, 8, '#38bdf8');
+  pxRect(ctx, x + 18, y - 6, 4, 8, '#475569');
+  // Dispenser de Água Quente + Copos de Cup Noodles (centro)
+  pxBox(ctx, x + 26, y - 10, 14, 14, '#cbd5e1', PX_OUTLINE, 2);
+  pxBox(ctx, x + 42, y - 6, 8, 10, '#ef4444', PX_OUTLINE, 2); // Cup Noodle 1
+  pxRect(ctx, x + 44, y - 4, 4, 2, '#fef08a');
+  pxBox(ctx, x + 52, y - 6, 8, 10, '#f97316', PX_OUTLINE, 2); // Cup Noodle 2
+}
+
+// Máquina de Vendas Clean 32x32
+function drawCleanVendingMachine(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  pxRect(ctx, x + 2, y + 28, 24, 4, PX_SHADOW);
+  pxBox(ctx, x, y, 24, 30, '#475569', PX_OUTLINE, 2);
+  pxBox(ctx, x + 4, y + 4, 16, 16, '#1e293b', PX_OUTLINE, 2);
+  pxRect(ctx, x + 6, y + 6, 12, 4, '#38bdf8');
+  pxRect(ctx, x + 6, y + 12, 12, 4, '#4ade80');
+  pxRect(ctx, x + 4, y + 22, 16, 4, '#0f172a');
+}
+
+// Poltrona Clean 16x16
+function drawCleanChair(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: 'RED' | 'BLUE'
+) {
+  const main = color === 'RED' ? '#c84b53' : '#3b66b0';
+  pxRect(ctx, x - 7, y + 5, 14, 4, PX_SHADOW);
+  pxBox(ctx, x - 7, y - 6, 14, 12, main, PX_OUTLINE, 2);
+}
+
+// Estante Metálica Clean (Estoque)
+function drawCleanShelf(ctx: CanvasRenderingContext2D, x: number, y: number, w = 32) {
+  pxRect(ctx, x + 2, y + 22, w, 4, PX_SHADOW);
+  pxBox(ctx, x, y, w, 24, '#cbd5e1', PX_OUTLINE, 2);
+  pxRect(ctx, x + 4, y + 4, w - 8, 6, '#d99b52');
+  pxRect(ctx, x + 4, y + 12, w - 8, 6, '#38bdf8');
+}
+
+// ============================================================================
+// ESTILO NEON CYBERPUNK-COZY: placas neon, vegetação, luminárias e evolução de equipamentos
+// ============================================================================
+export const TIER_PC: Record<string, number> = {
+  'PC Básico': 0,
+  'PC Intermediário': 1,
+  'PC Gaming': 2,
+  'VIP Station': 3,
+};
+
+// Onde a animação de Level-Up aparece para cada melhoria do estabelecimento
+export const POSICAO_MELHORIA: Record<string, { x: number; y: number }> = {
+  inf_eletrica: { x: 790, y: 150 },
+  inf_seguranca: { x: 560, y: 130 },
+  inf_ar: { x: 540, y: 330 },
+  eq_pcs: { x: 400, y: 420 },
+  eq_print: { x: 470, y: 232 },
+  eq_console: { x: 940, y: 490 },
+  eq_monitor: { x: 690, y: 420 },
+};
+
+const RGB_CICLO = ['#f43f5e', '#facc15', '#4ade80', '#22d3ee', '#a855f7'];
+
+function nivelMelhoria(melhorias: MelhoriaEstabelecimento[], id: string): number {
+  const m = melhorias.find((x) => x.id === id);
+  return m && m.ativo !== false ? m.nivel : 0;
+}
+
+function drawNeonSign(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  y: number,
+  w: number,
+  texto: string,
+  cor: string,
+  fonte = 'bold 11px "Chakra Petch", monospace'
+) {
+  pxBox(ctx, cx - w / 2, y, w, 22, '#120d26', cor, 2);
+  pxRect(ctx, cx - w / 2 + 4, y + 4, w - 8, 2, 'rgba(255,255,255,0.12)');
+  ctx.font = fonte;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = cor;
+  ctx.fillText(texto, cx, y + 16);
+  ctx.textAlign = 'start';
+}
+
+function drawLushBush(ctx: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+  const tons = ['#173a2c', '#1f5138', '#2a6a42', '#3d8a4f'];
+  pxRect(ctx, x - 14, y + 8, 28, 4, 'rgba(10,6,20,0.35)');
+  pxBox(ctx, x - 14, y - 6, 28, 16, tons[0], '#0c1a14', 2);
+  pxRect(ctx, x - 10, y - 4, 20, 8, tons[1]);
+  pxRect(ctx, x - 6, y - 4, 10, 4, tons[2 + (seed % 2)]);
+  if (seed % 3 === 0) {
+    pxRect(ctx, x + 6, y - 4, 4, 4, '#f472b6');
+    pxRect(ctx, x - 8, y, 4, 4, '#fde047');
+  }
+}
+
+function drawStreetLamp(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  pxRect(ctx, x - 3, y + 10, 8, 4, 'rgba(10,6,20,0.4)');
+  pxBox(ctx, x - 2, y - 20, 6, 32, '#2b2540', PX_OUTLINE, 2);
+  pxBox(ctx, x - 6, y - 28, 14, 10, '#fbbf24', PX_OUTLINE, 2);
+  pxRect(ctx, x - 2, y - 26, 6, 4, '#fff7c2');
+}
+
+// PC evolutivo por nível: Básico → Intermediário → Gaming → VIP Station
+function drawPcStation(
+  ctx: CanvasRenderingContext2D,
+  mx: number,
+  my: number,
+  tick: number,
+  pc: Computador,
+  nivelPcs: number,
+  nivelMonitor: number
+) {
+  const tier = TIER_PC[pc.categoria] ?? (pc.area === 'VIP' ? 3 : 0);
+  const rgb = RGB_CICLO[(Math.floor(tick / 8) + pc.numero) % RGB_CICLO.length];
+  const manut = pc.status === 'MANUTENCAO';
+
+  const deskCor = ['#9b7048', '#6d5a82', '#3b2d54', '#2a1f45'][tier];
+  const deskTop = ['#c08c58', '#8a77a3', '#4c3a6e', '#3c2d63'][tier];
+  pxRect(ctx, mx - 18, my + 10, 40, 4, PX_SHADOW);
+  pxBox(ctx, mx - 18, my - 8, 40, 20, deskCor, tier === 3 ? '#facc15' : PX_OUTLINE, 2);
+  pxRect(ctx, mx - 14, my - 4, 32, 10, deskTop);
+
+  // Faixa RGB sob a mesa (Gaming/VIP, ou melhoria Bancadas Gamer nível 4+)
+  if (tier >= 2 || nivelPcs >= 4) {
+    pxRect(ctx, mx - 16, my + 10, 36, 2, tier === 3 ? '#facc15' : rgb);
+  }
+  // Teclado e mouse
+  pxRect(ctx, mx - 8, my + 2, 14, 3, tier >= 2 ? rgb : '#1e293b');
+  pxRect(ctx, mx + 8, my + 2, 3, 3, tier >= 1 ? '#38bdf8' : '#334155');
+
+  // Gabinete
+  const towerCor = ['#1e293b', '#334155', '#475569', '#3b2d54'][tier];
+  pxBox(ctx, mx + 12, my - 12, 8, 18, towerCor, tier === 3 ? '#facc15' : PX_OUTLINE, 2);
+  if (manut) {
+    pxRect(ctx, mx + 14, my - 8, 4, 6, tick % 14 < 7 ? '#ef4444' : '#7f1d1d');
+  } else if (tier === 0) {
+    pxRect(ctx, mx + 14, my - 6, 2, 2, '#22c55e');
+  } else if (tier === 1) {
+    pxRect(ctx, mx + 14, my - 8, 4, 4, '#22d3ee');
+  } else {
+    pxRect(ctx, mx + 14, my - 10, 4, 4, rgb);
+    pxRect(ctx, mx + 14, my - 4, 4, 4, RGB_CICLO[(Math.floor(tick / 8) + pc.numero + 2) % 5]);
+  }
+
+  // Cores da tela por status
+  let tela = '#22c55e';
+  if (pc.status === 'OCUPADO') {
+    tela = (tick + pc.numero * 5) % 24 < 12 ? '#0284c7' : '#4f46e5';
+  } else if (manut) {
+    tela = tick % 14 < 7 ? '#ea580c' : '#dc2626';
+  }
+
+  const bonus = nivelMonitor >= 3 ? 2 : 0;
+  const rim = ['#475569', '#3b82f6', '#22d3ee', '#facc15'][tier];
+  if (tier === 0) {
+    pxBox(ctx, mx - 10, my - 12, 18 + bonus, 12, '#334155', PX_OUTLINE, 2);
+    pxRect(ctx, mx - 6, my - 8, 10 + bonus, 6, tela);
+  } else if (tier === 1) {
+    pxBox(ctx, mx - 11, my - 14, 20 + bonus, 14, '#334155', rim, 2);
+    pxRect(ctx, mx - 7, my - 10, 12 + bonus, 8, tela);
+  } else if (tier === 2) {
+    pxBox(ctx, mx - 12, my - 15, 22 + bonus, 14, '#1e293b', rim, 2);
+    pxRect(ctx, mx - 8, my - 11, 14 + bonus, 8, tela);
+    pxBox(ctx, mx - 20, my - 16, 8, 16, '#1e293b', rim, 2);
+    pxRect(ctx, mx - 18, my - 12, 4, 8, pc.status === 'OCUPADO' ? rgb : '#334155');
+  } else {
+    pxBox(ctx, mx - 12, my - 16, 24 + bonus, 15, '#1e1b2e', rim, 2);
+    pxRect(ctx, mx - 8, my - 12, 16 + bonus, 9, tela);
+    pxBox(ctx, mx - 22, my - 14, 10, 13, '#1e1b2e', rim, 2);
+    pxRect(ctx, mx - 20, my - 10, 6, 7, pc.status === 'OCUPADO' ? '#a855f7' : '#334155');
+    pxBox(ctx, mx + 12, my - 14, 10, 4, '#1e1b2e', rim, 2);
+  }
+}
+
+

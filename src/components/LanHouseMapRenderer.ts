@@ -1,105 +1,15 @@
-import { Computador, MelhoriaEstabelecimento } from '../domain/types';
+﻿import { Computador, MelhoriaEstabelecimento } from '../domain/types';
 import { nodoAssentoDoPc, WAYPOINT_NODES } from '../domain/WaypointGraph';
+import { TILE_SIZE, WORLD_H, WORLD_W } from '../world/constants';
+import { PAREDES_VIDRO, PORTAS, SALAS, Sala } from '../world/layout';
+import { segmentosDeParede } from '../world/collision';
 
 /**
- * RENDERIZADOR DE MAPA 32x32 SLIM & CLEAN (Estilo Internet Cafe Simulator / Esports Tycoon 2D)
- * - Malha Modular Oficial de 32x32 pixels (40x24 tiles = 1280x768)
- * - Divisórias de parede SLIM & CLEAN (6px com seções de divisória de vidro acústico 4px)
- * - 9 Portas Arquitetônicas 100% alinhadas com o Grafo Ortogonal de IA (WaypointGraph.ts)
- * - Adições inspiradas em Cyber Cafés modernos (Web): Totem Auto-Atendimento PIX/ATM,
- *   Estação Ramen / Cup Noodles & Micro-ondas, Cabines Acústicas VIP, Claw Machine e Palco E-Sports.
+ * RENDERIZADOR DO MAPA 96x64 (tiles de 32px) — camadas: chão, móveis, PCs/melhorias,
+ * paredes slim, iluminação. Chão/móveis/paredes são pré-renderizados em caches.
  */
 
-export const TILE_SIZE = 32; // Malha oficial 32x32!
-
-export interface PortaArquitetonica {
-  id: string;
-  orientacao: 'HORIZONTAL' | 'VERTICAL';
-  x: number;
-  y: number;
-  largura: number;
-  etiqueta: string;
-}
-
-export const PORTAS_ARQUITETONICAS: PortaArquitetonica[] = [
-  {
-    id: 'porta_principal',
-    orientacao: 'HORIZONTAL',
-    x: 544,
-    y: 584,
-    largura: 64,
-    etiqueta: 'ENTRADA',
-  },
-  {
-    id: 'porta_escritorio',
-    orientacao: 'HORIZONTAL',
-    x: 336,
-    y: 288,
-    largura: 44,
-    etiqueta: 'ESTÚDIO',
-  },
-  {
-    id: 'porta_recepcao',
-    orientacao: 'HORIZONTAL',
-    x: 544,
-    y: 288,
-    largura: 48,
-    etiqueta: 'RECEPÇÃO',
-  },
-  {
-    id: 'porta_sala_tecnica',
-    orientacao: 'HORIZONTAL',
-    x: 768,
-    y: 288,
-    largura: 44,
-    etiqueta: 'NOC TI',
-  },
-  {
-    id: 'porta_ala_oeste',
-    orientacao: 'VERTICAL',
-    x: 208,
-    y: 368,
-    largura: 44,
-    etiqueta: 'DECK OESTE',
-  },
-  {
-    id: 'porta_cozinha',
-    orientacao: 'VERTICAL',
-    x: 864,
-    y: 240,
-    largura: 40,
-    etiqueta: 'CAFÉ',
-  },
-  {
-    id: 'porta_estoque',
-    orientacao: 'VERTICAL',
-    x: 864,
-    y: 368,
-    largura: 40,
-    etiqueta: 'ESTOQUE',
-  },
-  {
-    id: 'porta_sala_vip',
-    orientacao: 'VERTICAL',
-    x: 864,
-    y: 512,
-    largura: 40,
-    etiqueta: 'CONSOLES',
-  },
-  {
-    id: 'porta_arena_esports',
-    orientacao: 'VERTICAL',
-    x: 1040,
-    y: 512,
-    largura: 44,
-    etiqueta: 'E-SPORTS',
-  },
-];
-
-export interface ParallaxOffsets2D {
-  camX: number;
-  camY: number;
-}
+export { TILE_SIZE };
 
 const PX_OUTLINE = '#261d2e';
 const PX_WALL_SLIM = '#f1f5f9';
@@ -299,13 +209,13 @@ export const TIER_PC: Record<string, number> = {
 
 // Onde a animação de Level-Up aparece para cada melhoria do estabelecimento
 export const POSICAO_MELHORIA: Record<string, { x: number; y: number }> = {
-  inf_eletrica: { x: 790, y: 150 },
-  inf_seguranca: { x: 560, y: 130 },
-  inf_ar: { x: 540, y: 330 },
-  eq_pcs: { x: 400, y: 420 },
-  eq_print: { x: 470, y: 232 },
-  eq_console: { x: 940, y: 490 },
-  eq_monitor: { x: 690, y: 420 },
+  inf_eletrica: { x: 37 * 32, y: 7 * 32 },
+  inf_seguranca: { x: 40 * 32, y: 46 * 32 },
+  inf_ar: { x: 40 * 32, y: 28 * 32 },
+  eq_pcs: { x: 29 * 32, y: 26 * 32 },
+  eq_print: { x: 45 * 32, y: 47 * 32 },
+  eq_console: { x: 73.5 * 32, y: 42 * 32 },
+  eq_monitor: { x: 73.5 * 32, y: 24 * 32 },
 };
 
 const RGB_CICLO = ['#f43f5e', '#facc15', '#4ade80', '#22d3ee', '#a855f7'];
@@ -424,658 +334,800 @@ function drawPcStation(
   }
 }
 
+
+
 // ============================================================================
-// CACHE DAS CAMADAS (PISO / MOBILIÁRIO / PAREDES) EM MALHA DE TILES 32x32
+// ADEREÇOS ADICIONAIS (mapa 96x64)
 // ============================================================================
-let floorParallaxCache: HTMLCanvasElement | null = null;
-let furnitureParallaxCache: HTMLCanvasElement | null = null;
-let wallCapParallaxCache: HTMLCanvasElement | null = null;
-let cachedScale = 0;
-const CACHE_VERSION = 50; // Geração 32x32 Slim & Clean + Portas Ortogonais
-let builtVersion = 0;
+const t = (v: number): number => Math.round(v * TILE_SIZE);
 
-function ensureParallaxCachesBuilt(scale: number) {
-  const WORLD_W = 1280;
-  const WORLD_H = 768;
-
-  if (
-    floorParallaxCache &&
-    furnitureParallaxCache &&
-    wallCapParallaxCache &&
-    cachedScale === scale &&
-    builtVersion === CACHE_VERSION
-  ) {
-    return;
-  }
-
-  // --------------------------------------------------------------------------
-  // CAMADA 1: PISOS EM MALHA DE TILES 32x32
-  // --------------------------------------------------------------------------
-  const floorCanvas = document.createElement('canvas');
-  floorCanvas.width = Math.round(WORLD_W * scale);
-  floorCanvas.height = Math.round(WORLD_H * scale);
-  const fCtx = floorCanvas.getContext('2d')!;
-  fCtx.save();
-  fCtx.scale(scale, scale);
-  fCtx.imageSmoothingEnabled = false;
-
-  // Gramado externo em Tiles 32x32
-  pxRect(fCtx, 0, 0, WORLD_W, WORLD_H, '#1c3a31');
-  for (let ty = 64; ty < 592; ty += TILE_SIZE) {
-    for (let tx = 0; tx < WORLD_W; tx += TILE_SIZE) {
-      if ((tx / TILE_SIZE + ty / TILE_SIZE) % 2 === 0) {
-        pxRect(fCtx, tx, ty, TILE_SIZE, TILE_SIZE, '#234537');
-      }
-    }
-  }
-
-  // Calçada 32x32 (y: 586..650) e Rua
-  fillCeramicTiles32x32(fCtx, 0, 586, WORLD_W, 64, '#2f2945', '#443d63', '#544c78');
-  pxRect(fCtx, 0, 650, WORLD_W, 4, '#64748b');
-  pxRect(fCtx, 0, 654, WORLD_W, 114, '#1a1829');
-  for (let cy = 662; cy < 746; cy += 14) {
-    pxBox(fCtx, 512, cy, 64, 8, '#f1f5f9', PX_OUTLINE, 2);
-  }
-  for (let rx = 32; rx < WORLD_W; rx += 64) {
-    if (rx > 480 && rx < 600) continue;
-    pxRect(fCtx, rx, 704, 32, 4, '#facc15');
-  }
-
-  // Sombra externa sutil do complexo
-  pxRect(fCtx, 76, 100, 1116, 490, 'rgba(20, 14, 28, 0.28)');
-
-  // 1. ALA OESTE (x: 80..208, y: 104..584) - Deck Madeira 32x32
-  fillWoodTiles32x32(fCtx, 80, 104, 128, 480, '#4a2b2f', '#6b3f3a', '#7c4a40', '#8e5848');
-
-  // 2. ESCRITÓRIO & ESTÚDIO STREAMER (x: 208..430, y: 104..288) - Piso Estúdio 32x32
-  fillCeramicTiles32x32(fCtx, 208, 104, 222, 184, '#322b4a', '#413860', '#51477a');
-  // Palco elevado 32x32 do Estúdio Streamer (x: 304..420, y: 128..212)
-  fillCeramicTiles32x32(fCtx, 304, 128, 116, 84, '#c4c6d0', '#dcdde4', '#f4f5fa');
-  pxBox(fCtx, 304, 208, 116, 6, '#5c5e72', PX_OUTLINE, 2);
-
-  // 3. RECEPÇÃO & CHECK-IN (x: 430..686, y: 104..288) - Madeira Quente 32x32
-  fillWoodTiles32x32(fCtx, 430, 104, 256, 184, '#5e3530', '#83503f', '#95604b', '#a77058');
-  // Tapete Central alinhado com porta_recepcao (x: 516..572, y: 204..282)
-  pxBox(fCtx, 516, 204, 56, 78, '#8c4f4b', PX_OUTLINE, 2);
-  pxBox(fCtx, 522, 210, 44, 66, '#a6605b', '#e09f87', 2);
-
-  // 4. SALA TÉCNICA NOC (x: 686..864, y: 104..288) - Ladrilho Técnico 32x32
-  fillCeramicTiles32x32(fCtx, 686, 104, 178, 184, '#262d4d', '#333c66', '#414b80');
-  // Trincheira de vidro de fibra óptica (sem bloquear o hall)
-  pxBox(fCtx, 704, 164, 96, 16, '#1e293b', PX_OUTLINE, 2);
-  pxRect(fCtx, 708, 168, 88, 2, '#38bdf8');
-  pxRect(fCtx, 708, 172, 88, 2, '#4ade80');
-
-  // 5. LANCHONETE & RAMEN BAR (x: 864..1040, y: 104..288) - Xadrez 32x32 Clean
-  pxRect(fCtx, 864, 104, 176, 184, '#3a2a40');
-  for (let ty = 104; ty < 288; ty += TILE_SIZE) {
-    for (let tx = 864; tx < 1040; tx += TILE_SIZE) {
-      const isAlt = ((tx - 864) / TILE_SIZE + (ty - 104) / TILE_SIZE) % 2 === 0;
-      pxRect(fCtx, tx + 2, ty + 2, TILE_SIZE - 4, TILE_SIZE - 4, isAlt ? '#7a4a4c' : '#613b4a');
-    }
-  }
-
-  // 6. ARENA GAMER PRINCIPAL (x: 208..608, y: 288..584) - Madeira 32x32 + Corredor Central
-  fillWoodTiles32x32(fCtx, 208, 288, 400, 296, '#4d2d44', '#693d56', '#7b4a66', '#8d5877');
-  // Passadeira do Eixo Central Ortogonal (x: 528..560, y: 288..584)
-  pxBox(fCtx, 528, 290, 32, 292, '#334155', PX_OUTLINE, 2);
-  pxRect(fCtx, 532, 292, 2, 288, '#38bdf8');
-  pxRect(fCtx, 554, 292, 2, 288, '#38bdf8');
-
-  // 7. ARENA VIP PRO-GAMING (x: 608..864, y: 288..584) - Ladrilho Escuro 32x32
-  fillCeramicTiles32x32(fCtx, 608, 288, 256, 296, '#231f33', '#34304a', '#464066');
-  // Passadeira do Corredor Leste (x: 816..848, y: 224..556)
-  pxBox(fCtx, 820, 228, 24, 324, '#2a2640', '#38bdf8', 2);
-
-  // 8. ESTOQUE (x: 864..1040, y: 288..436) & 9. CONSOLES VIP (y: 436..584) em Tiles 32x32
-  fillCeramicTiles32x32(fCtx, 864, 288, 176, 148, '#2d2b47', '#3d3a5e', '#4d4a74');
-  fillCeramicTiles32x32(fCtx, 864, 436, 176, 148, '#2d2b47', '#403c63', '#504c78');
-
-  // 10. ALA LESTE: ARENA TORNEIO E-SPORTS (x: 1040..1184, y: 104..584) - Tiles 32x32
-  fillCeramicTiles32x32(fCtx, 1040, 104, 144, 480, '#27303f', '#334155', '#475569');
-  fillCeramicTiles32x32(fCtx, 1056, 144, 112, 160, '#1e1b4b', '#312e81', '#4338ca');
-  pxBox(fCtx, 1056, 300, 112, 6, '#facc15', PX_OUTLINE, 2);
-
-  // Tapetes de Soleira nas 9 Portas Arquitetônicas (Destaca visualmente cada entrada!)
-  PORTAS_ARQUITETONICAS.forEach((p) => {
-    if (p.orientacao === 'HORIZONTAL') {
-      pxBox(fCtx, p.x - p.largura / 2, p.y - 8, p.largura, 16, '#334155', '#38bdf8', 2);
-    } else {
-      pxBox(fCtx, p.x - 8, p.y - p.largura / 2, 16, p.largura, '#334155', '#38bdf8', 2);
-    }
-  });
-
-  fCtx.restore();
-  floorParallaxCache = floorCanvas;
-
-  // --------------------------------------------------------------------------
-  // CAMADA 2: MOBILIÁRIO MODULAR 32x32 SLIM & CLEAN (Foco no essencial!)
-  // --------------------------------------------------------------------------
-  const furnCanvas = document.createElement('canvas');
-  furnCanvas.width = Math.round(WORLD_W * scale);
-  furnCanvas.height = Math.round(WORLD_H * scale);
-  const mCtx = furnCanvas.getContext('2d')!;
-  mCtx.save();
-  mCtx.scale(scale, scale);
-  mCtx.imageSmoothingEnabled = false;
-
-  // Painéis superiores enxutos (16px)
-  drawCleanHeaderWall(mCtx, 82, 106, 124, '#ede4c8', '#73997a');
-  drawCleanHeaderWall(mCtx, 210, 106, 218, '#d9d4c5', '#8c6747');
-  drawCleanHeaderWall(mCtx, 432, 106, 252, '#e3d5b8', '#b5804c');
-  drawCleanHeaderWall(mCtx, 688, 106, 174, '#ede4c8', '#73997a');
-  drawCleanHeaderWall(mCtx, 866, 106, 172, '#ede4c8', '#73997a');
-  drawCleanHeaderWall(mCtx, 1042, 106, 140, '#d9d4c5', '#475569');
-
-  // 1. ALA OESTE: DECK GAMER (6 PCs extras em x = 112 / 176 + corredor central em x = 144)
-  drawCleanVendingMachine(mCtx, 96, 124);
-  drawCleanPlant(mCtx, 176, 166);
-  drawCleanPlant(mCtx, 112, 548);
-  drawCleanPlant(mCtx, 176, 548);
-  // Tapete neon do corredor central do deck
-  pxBox(mCtx, 134, 232, 20, 250, '#2a2640', '#a855f7', 2);
-
-  // Vegetação densa e luminárias externas (estilo cyberpunk-cozy)
-  for (let bx = 24; bx < 1260; bx += 52) {
-    drawLushBush(mCtx, bx, 78, bx / 52);
-  }
-  [30, 1240].forEach((bx) => {
-    for (let by = 130; by < 560; by += 70) drawLushBush(mCtx, bx, by, by / 70 + 1);
-  });
-  [150, 420, 700, 980, 1180].forEach((lx) => drawStreetLamp(mCtx, lx, 604));
-  // Placa neon principal sobre a porta de entrada
-  drawNeonSign(mCtx, 576, 590, 150, 'LAN HOUSE', '#c084fc', 'bold 13px "Chakra Petch", monospace');
-
-  // 2. ESCRITÓRIO & ESTÚDIO STREAMER (x: 210..428, y: 108..288)
-  // Mesa Executiva POO (x: 224..288, y: 152..176 — acima do waypoint 256, 196!)
-  pxBox(mCtx, 224, 152, 64, 24, '#8c5832', PX_OUTLINE, 2);
-  pxRect(mCtx, 228, 156, 56, 14, '#b87a4b');
-  pxBox(mCtx, 248, 146, 16, 12, '#475569', PX_OUTLINE, 2);
-
-  // Bancada Streamer no Palco (x: 320..408, y: 152..176 — acima do waypoint 368, 196!)
-  pxBox(mCtx, 332, 110, 64, 18, '#334155', PX_OUTLINE, 2); // Telão Live
-  pxRect(mCtx, 336, 114, 56, 10, '#38bdf8');
-  pxBox(mCtx, 320, 152, 88, 22, '#cfd6e6', PX_OUTLINE, 2);
-  pxRect(mCtx, 324, 154, 80, 10, '#f8fafc');
-  pxBox(mCtx, 352, 166, 24, 6, '#38bdf8', PX_OUTLINE, 2);
-
-  // 3. RECEPÇÃO & CHECK-IN (x: 432..684, y: 108..288)
-  // Balcão em U Clean (x: 484..612, y: 144..196 — atendente fica em y = 172, fila em y = 252!)
-  pxRect(mCtx, 486, 194, 126, 4, PX_SHADOW);
-  pxBox(mCtx, 484, 148, 20, 46, '#e0b878', PX_OUTLINE, 2);
-  pxBox(mCtx, 592, 148, 20, 46, '#e0b878', PX_OUTLINE, 2);
-  pxBox(mCtx, 484, 174, 128, 22, '#c88a4b', PX_OUTLINE, 2);
-  pxRect(mCtx, 488, 176, 120, 8, '#e8c482');
-  [520, 572].forEach((mx) => {
-    pxBox(mCtx, mx - 10, 166, 20, 14, '#475569', PX_OUTLINE, 2);
-    pxRect(mCtx, mx - 2, 170, 4, 4, '#f8fafc');
-  });
-  // Totem Auto-Atendimento PIX/ATM (em 604, 224) + Vending Machine (em 644, 144)
-  drawPixSelfServiceKiosk(mCtx, 608, 224);
-  drawCleanVendingMachine(mCtx, 636, 144);
-  drawCleanPlant(mCtx, 448, 144);
-
-  // 4. SALA TÉCNICA NOC (x: 688..862, y: 108..288)
-  // Bancada de Reparo (x: 804..852, y: 184..216 — acima do waypoint 816, 236!)
-  pxBox(mCtx, 804, 184, 48, 24, '#cfd6e0', PX_OUTLINE, 2);
-  pxBox(mCtx, 812, 188, 18, 12, '#15803d', PX_OUTLINE, 2);
-  drawCleanShelf(mCtx, 816, 124, 36);
-
-  // 5. LANCHONETE & RAMEN BAR (x: 864..1038, y: 108..288)
-  // Estação Ramen / Cup Noodles & Micro-ondas no topo (x: 884..948, y: 128) + Cafeteira (x: 956..1028, y: 128)
-  drawRamenAndMicrowaveStation(mCtx, 884, 128);
-  pxBox(mCtx, 956, 128, 72, 24, '#c88a4b', PX_OUTLINE, 2);
-  pxBox(mCtx, 962, 118, 22, 16, '#cbd5e1', PX_OUTLINE, 2); // Espresso
-  pxRect(mCtx, 966, 122, 14, 4, '#ef4444');
-  pxBox(mCtx, 990, 120, 32, 14, '#bae6fd', PX_OUTLINE, 2); // Vitrine
-
-  // 2 Mesas Clean de Refeição (posicionadas à direita em x = 1008 para deixar os waypoints 912 e 976 livres!)
-  [196, 248].forEach((ty, idx) => {
-    drawCleanChair(mCtx, 996, ty, idx === 0 ? 'RED' : 'BLUE');
-    pxBox(mCtx, 1004, ty - 10, 26, 20, '#57534e', PX_OUTLINE, 2);
-    pxRect(mCtx, 1008, ty - 6, 18, 12, '#78716c');
-  });
-
-  // 6. ESTOQUE DE HARDWARE (x: 864..1038, y: 288..436)
-  // Prateleiras no topo (y = 304) deixando o corredor y = 368 100% desimpedido!
-  drawCleanShelf(mCtx, 888, 304, 40);
-  drawCleanShelf(mCtx, 936, 304, 40);
-  drawCleanShelf(mCtx, 984, 304, 40);
-  // Caixas no canto sudeste (x: 968, y: 396)
-  pxBox(mCtx, 968, 396, 28, 22, '#d99b52', PX_OUTLINE, 2);
-  pxRect(mCtx, 978, 398, 6, 18, '#f8fafc');
-
-  // 7. SALA DE CONSOLES VIP (x: 864..1038, y: 436..584)
-  // Sofá e Mesa de Centro posicionados sem bloquear a reta y = 512 (porta_sala_vip -> porta_arena_esports)
-  pxBox(mCtx, 944, 540, 64, 24, '#475569', PX_OUTLINE, 2);
-  pxRect(mCtx, 948, 544, 56, 16, '#64748b');
-  drawCleanChair(mCtx, 932, 552, 'BLUE');
-  drawCleanChair(mCtx, 1020, 552, 'RED');
-
-  // 8. ALA LESTE: PALCO TORNEIO E-SPORTS (x: 1040..1184, y: 104..584)
-  pxBox(mCtx, 1068, 112, 88, 22, '#1e293b', PX_OUTLINE, 2);
-  pxRect(mCtx, 1072, 116, 80, 14, '#0284c7');
-  pxBox(mCtx, 1102, 118, 20, 10, '#facc15', PX_OUTLINE, 2);
-  // Bancadas Time Azul vs Time Vermelho no palco
-  pxBox(mCtx, 1064, 176, 42, 22, '#2563eb', PX_OUTLINE, 2);
-  pxBox(mCtx, 1118, 176, 42, 22, '#dc2626', PX_OUTLINE, 2);
-  pxBox(mCtx, 1064, 236, 42, 22, '#2563eb', PX_OUTLINE, 2);
-  pxBox(mCtx, 1118, 236, 42, 22, '#dc2626', PX_OUTLINE, 2);
-  // Cadeiras da plateia acima da rota y = 512 (em y = 360 e y = 416)
-  [360, 416].forEach((ry, rIdx) => {
-    drawCleanChair(mCtx, 1072, ry, rIdx === 0 ? 'BLUE' : 'RED');
-    drawCleanChair(mCtx, 1112, ry, rIdx === 0 ? 'RED' : 'BLUE');
-    drawCleanChair(mCtx, 1152, ry, rIdx === 0 ? 'BLUE' : 'RED');
-  });
-
-  mCtx.restore();
-  furnitureParallaxCache = furnCanvas;
-
-  // --------------------------------------------------------------------------
-  // CAMADA 3: PAREDES CUTAWAY SLIM & CLEAN (6px espessura + Divisórias de Vidro 4px!)
-  // --------------------------------------------------------------------------
-  const wallCanvas = document.createElement('canvas');
-  wallCanvas.width = Math.round(WORLD_W * scale);
-  wallCanvas.height = Math.round(WORLD_H * scale);
-  const wCtx = wallCanvas.getContext('2d')!;
-  wCtx.save();
-  wCtx.scale(scale, scale);
-  wCtx.imageSmoothingEnabled = false;
-
-  const drawSlimHWall = (x1: number, x2: number, y: number, thick = 6, isGlass = false) => {
-    const w = x2 - x1;
-    if (w <= 0) return;
-    pxRect(wCtx, x1, y + thick / 2, w, 3, PX_SHADOW);
-    pxBox(
-      wCtx,
-      x1,
-      y - thick / 2,
-      w,
-      thick,
-      isGlass ? PX_GLASS_WALL : PX_WALL_SLIM,
-      PX_OUTLINE,
-      1.5
-    );
-  };
-
-  const drawSlimVWall = (x: number, y1: number, y2: number, thick = 6, isGlass = false) => {
-    const h = y2 - y1;
-    if (h <= 0) return;
-    pxRect(wCtx, x + thick / 2, y1, 3, h, PX_SHADOW);
-    pxBox(
-      wCtx,
-      x - thick / 2,
-      y1,
-      thick,
-      h,
-      isGlass ? PX_GLASS_WALL : PX_WALL_SLIM,
-      PX_OUTLINE,
-      1.5
-    );
-  };
-
-  // Perímetro Externo Slim (8px) com abertura exata para porta_principal (x: 512..576, y = 584)
-  drawSlimHWall(76, 1188, 104, 8);
-  drawSlimHWall(76, 512, 584, 8);
-  drawSlimHWall(576, 1188, 584, 8);
-  drawSlimVWall(80, 100, 588, 8);
-  drawSlimVWall(1184, 100, 588, 8);
-
-  // Parede Horizontal Norte (y = 288) com as 3 Portas exatas:
-  // - porta_escritorio (x: 314..358)
-  // - porta_recepcao (x: 520..568)
-  // - porta_sala_tecnica (x: 746..790)
-  drawSlimHWall(208, 314, 288, 6);
-  drawSlimHWall(358, 520, 288, 6, true); // Divisória de vidro acústico na frente da Recepção!
-  drawSlimHWall(568, 746, 288, 6, true);
-  drawSlimHWall(790, 1040, 288, 6);
-
-  // Parede Horizontal entre Estoque e Consoles (y = 436)
-  drawSlimHWall(864, 1040, 436, 6);
-
-  // Parede Vertical da Ala Oeste (x = 208) com vão para porta_ala_oeste (y: 346..390)
-  drawSlimVWall(208, 104, 346, 6);
-  drawSlimVWall(208, 390, 584, 6);
-
-  // Paredes Verticais entre Estúdio/Recepção (x = 430) e Recepção/NOC (x = 686)
-  drawSlimVWall(430, 104, 288, 6);
-  drawSlimVWall(686, 104, 288, 6);
-
-  // Divisória de Vidro Acústico Slim entre Corredor Central e Arena VIP (x = 608)
-  drawSlimVWall(608, 384, 436, 4, true);
-  drawSlimVWall(608, 468, 520, 4, true);
-
-  // Parede Vertical Leste (x = 864) com os 3 vãos exatos:
-  // - porta_cozinha (y: 220..260)
-  // - porta_estoque (y: 348..388)
-  // - porta_sala_vip (y: 492..532)
-  drawSlimVWall(864, 104, 220, 6);
-  drawSlimVWall(864, 260, 348, 6);
-  drawSlimVWall(864, 388, 492, 6);
-  drawSlimVWall(864, 532, 584, 6);
-
-  // Parede Vertical da Arena E-Sports (x = 1040) com vão para porta_arena_esports (y: 490..534)
-  drawSlimVWall(1040, 104, 490, 6, true);
-  drawSlimVWall(1040, 534, 584, 6);
-
-  wCtx.restore();
-  wallCapParallaxCache = wallCanvas;
-
-  cachedScale = scale;
-  builtVersion = CACHE_VERSION;
+export interface VistaMundo {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
 }
 
-function drawPixelExteriorTree(ctx: CanvasRenderingContext2D, x: number, y: number, swayPx = 0) {
+function dentroDaVista(v: VistaMundo, x: number, y: number, folga = 80): boolean {
+  return x >= v.x1 - folga && x <= v.x2 + folga && y >= v.y1 - folga && y <= v.y2 + folga;
+}
+
+function drawPixelExteriorTree(ctx: CanvasRenderingContext2D, x: number, y: number) {
   const rx = snap2(x);
   const ry = snap2(y);
-  const sw = snap2(swayPx);
-
   pxRect(ctx, rx - 16, ry + 10, 32, 8, PX_SHADOW);
   pxBox(ctx, rx - 6, ry - 8, 12, 22, '#7a4829', PX_OUTLINE, 2);
-  pxBox(ctx, rx - 20 + sw, ry - 30, 40, 22, '#24523b', PX_OUTLINE, 2);
-  pxBox(ctx, rx - 16 + sw, ry - 40, 32, 16, '#388047', PX_OUTLINE, 2);
-  pxRect(ctx, rx - 10 + sw, ry - 36, 12, 6, '#63c74d');
+  pxBox(ctx, rx - 20, ry - 30, 40, 22, '#24523b', PX_OUTLINE, 2);
+  pxBox(ctx, rx - 16, ry - 40, 32, 16, '#388047', PX_OUTLINE, 2);
+  pxRect(ctx, rx - 10, ry - 36, 12, 6, '#63c74d');
 }
 
-function drawPixelGamingChair(
-  ctx: CanvasRenderingContext2D,
-  sx: number,
-  sy: number,
-  ehVip: boolean
-) {
+function drawPixelGamingChair(ctx: CanvasRenderingContext2D, sx: number, sy: number, ehVip: boolean) {
   const rx = snap2(sx);
   const ry = snap2(sy);
   const main = ehVip ? '#7e22ce' : '#2563eb';
   const trim = ehVip ? '#facc15' : '#38bdf8';
-
   pxRect(ctx, rx - 9, ry + 5, 18, 4, PX_SHADOW);
   pxBox(ctx, rx - 9, ry - 5, 18, 10, main, PX_OUTLINE, 2);
   pxRect(ctx, rx - 5, ry - 3, 2, 6, trim);
   pxRect(ctx, rx + 3, ry - 3, 2, 6, trim);
 }
 
-export function renderLanHouseArchitecture(
+function fillCarpet(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, base: string, spec: string) {
+  pxRect(ctx, x, y, w, h, base);
+  ctx.fillStyle = spec;
+  for (let ty = y; ty < y + h; ty += TILE_SIZE) {
+    for (let tx = x; tx < x + w; tx += TILE_SIZE) {
+      let s = (Math.imul(tx / TILE_SIZE + 1, 73856093) ^ Math.imul(ty / TILE_SIZE + 1, 19349663)) >>> 0;
+      for (let i = 0; i < 6; i++) {
+        s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+        const ox = (s >>> 8) % 30;
+        s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+        const oy = (s >>> 8) % 30;
+        ctx.fillRect(tx + ox, ty + oy, 2, 2);
+      }
+    }
+  }
+}
+
+function fillConcrete(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, base: string, seam: string) {
+  pxRect(ctx, x, y, w, h, base);
+  for (let ty = y; ty < y + h; ty += TILE_SIZE) {
+    for (let tx = x; tx < x + w; tx += TILE_SIZE) {
+      pxRect(ctx, tx, ty, Math.min(TILE_SIZE, x + w - tx), 2, seam);
+      pxRect(ctx, tx, ty, 2, Math.min(TILE_SIZE, y + h - ty), seam);
+    }
+  }
+}
+
+function drawTallShelf(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h = 56) {
+  pxRect(ctx, x + 2, y + h - 2, w, 4, PX_SHADOW);
+  pxBox(ctx, x, y, w, h, '#cbd5e1', PX_OUTLINE, 2);
+  const rows = 3;
+  const rh = Math.floor((h - 8) / rows);
+  const cores = ['#d99b52', '#38bdf8', '#f472b6', '#4ade80'];
+  for (let r = 0; r < rows; r++) {
+    const ry = y + 4 + r * rh;
+    pxRect(ctx, x + 4, ry + rh - 2, w - 8, 2, '#64748b');
+    for (let bx = x + 4; bx < x + w - 10; bx += 12) {
+      pxBox(ctx, bx, ry + 2, 10, rh - 6, cores[Math.floor(bx / 12 + r) % 4], PX_OUTLINE, 2);
+    }
+  }
+}
+
+function drawSofa(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, cor: string, encosto = '#1e1b4b') {
+  pxRect(ctx, x + 2, y + h - 2, w, 4, PX_SHADOW);
+  pxBox(ctx, x, y, w, h, encosto, PX_OUTLINE, 2);
+  pxBox(ctx, x + 4, y + 6, w - 8, h - 10, cor, PX_OUTLINE, 2);
+  pxRect(ctx, x + 8, y + 8, w - 16, 2, 'rgba(255,255,255,0.18)');
+}
+
+function drawRug(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, cor: string, borda: string) {
+  pxBox(ctx, x, y, w, h, cor, borda, 2);
+  pxRect(ctx, x + 8, y + 8, w - 16, 2, borda);
+  pxRect(ctx, x + 8, y + h - 10, w - 16, 2, borda);
+}
+
+function drawPoster(ctx: CanvasRenderingContext2D, x: number, y: number, c1: string, c2: string) {
+  pxBox(ctx, x, y, 28, 36, '#120d26', PX_OUTLINE, 2);
+  pxRect(ctx, x + 4, y + 4, 20, 14, c1);
+  pxRect(ctx, x + 4, y + 20, 20, 4, c2);
+  pxRect(ctx, x + 4, y + 26, 12, 2, '#f8fafc');
+}
+
+function drawLedStrip(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, cor: string) {
+  pxRect(ctx, x, y, w, 2, cor);
+}
+
+function drawBench(ctx: CanvasRenderingContext2D, x: number, y: number, w = 56) {
+  pxRect(ctx, x + 2, y + 12, w, 3, PX_SHADOW);
+  pxBox(ctx, x, y, w, 10, '#7a4829', PX_OUTLINE, 2);
+  pxRect(ctx, x + 4, y + 3, w - 8, 3, '#a8693a');
+}
+
+function drawExtinguisher(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  pxBox(ctx, x, y, 8, 16, '#dc2626', PX_OUTLINE, 2);
+  pxRect(ctx, x + 2, y + 2, 4, 3, '#1e293b');
+}
+
+function drawWcStall(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  pxBox(ctx, x, y, 56, 76, '#5b6b86', PX_OUTLINE, 2);
+  pxRect(ctx, x + 6, y + 8, 44, 4, '#8aa0c0');
+  pxBox(ctx, x + 14, y + 30, 28, 40, '#7b8aa8', PX_OUTLINE, 2);
+  pxRect(ctx, x + 38, y + 48, 3, 3, '#facc15');
+}
+
+function drawSink(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  pxRect(ctx, x + 2, y + 18, 56, 3, PX_SHADOW);
+  pxBox(ctx, x, y, 56, 16, '#cfd6e6', PX_OUTLINE, 2);
+  pxBox(ctx, x + 8, y + 4, 14, 8, '#7dd3fc', PX_OUTLINE, 2);
+  pxBox(ctx, x + 34, y + 4, 14, 8, '#7dd3fc', PX_OUTLINE, 2);
+  pxBox(ctx, x + 6, y - 22, 44, 18, '#bae6fd', PX_OUTLINE, 2); // espelho
+}
+
+function drawFoodTruck(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  pxRect(ctx, x + 4, y + 62, 150, 6, 'rgba(0,0,0,0.35)');
+  pxBox(ctx, x, y, 150, 60, '#f97316', PX_OUTLINE, 2);
+  pxBox(ctx, x + 104, y + 8, 40, 26, '#7dd3fc', PX_OUTLINE, 2);
+  pxBox(ctx, x + 10, y + 10, 82, 26, '#1e1b2e', '#facc15', 2);
+  pxRect(ctx, x + 14, y + 14, 74, 6, '#facc15');
+  pxRect(ctx, x + 14, y + 24, 50, 4, '#f472b6');
+  pxBox(ctx, x + 8, y + 38, 90, 8, '#dc2626', PX_OUTLINE, 2);
+  [26, 112].forEach((wx) => pxBox(ctx, x + wx, y + 48, 22, 18, '#1e293b', PX_OUTLINE, 2));
+}
+
+function drawArcadeCabinet(ctx: CanvasRenderingContext2D, x: number, y: number, cor: string, tick: number, idx: number) {
+  pxRect(ctx, x + 2, y + 38, 24, 4, PX_SHADOW);
+  pxBox(ctx, x, y, 26, 40, cor, PX_OUTLINE, 2);
+  pxRect(ctx, x + 4, y + 5, 18, 12, (tick + idx * 7) % 24 < 12 ? '#38bdf8' : '#f472b6');
+  pxRect(ctx, x + 4, y + 22, 18, 3, '#1e1b2e');
+  pxRect(ctx, x + 6, y + 27, 3, 3, '#ef4444');
+  pxRect(ctx, x + 12, y + 27, 3, 3, '#facc15');
+}
+
+function drawRack(ctx: CanvasRenderingContext2D, cx: number, tick: number, idx: number) {
+  const x = cx - 18;
+  const y = t(5.1);
+  pxBox(ctx, x, y, 36, 74, '#334155', PX_OUTLINE, 2);
+  for (let b = 0; b < 5; b++) {
+    pxBox(ctx, x + 4, y + 4 + b * 13, 28, 9, '#1e293b', PX_OUTLINE, 2);
+    const ledOn = (Math.floor(tick / 6) + b * 2 + idx) % 3 !== 0;
+    pxRect(ctx, x + 6, y + 7 + b * 13, 4, 3, ledOn ? '#4ade80' : '#0f172a');
+    pxRect(ctx, x + 12, y + 7 + b * 13, 4, 3, (b + idx) % 2 === 0 ? '#38bdf8' : '#0f172a');
+  }
+}
+
+// Posições das fliperamas (sempre animadas) e dos adereços evolutivos por nível
+const ARCADES: Array<{ x: number; y: number; cor: string; nivelMin?: number }> = [
+  // Lounge (sul)
+  { x: 5.6, y: 48.4, cor: '#6d28d9' },
+  { x: 8.2, y: 48.4, cor: '#1d4ed8' },
+  { x: 14.8, y: 48.4, cor: '#be185d' },
+  { x: 17.2, y: 48.4, cor: '#0e7490' },
+  // Arena (consoles)
+  { x: 65.2, y: 34.2, cor: '#6d28d9' },
+  { x: 67.6, y: 34.2, cor: '#1d4ed8' },
+  { x: 70, y: 34.2, cor: '#be185d' },
+  // Extras liberados com a melhoria "Lounge de Consoles"
+  { x: 75.2, y: 34.2, cor: '#0e7490', nivelMin: 2 },
+  { x: 65.2, y: 49.4, cor: '#9d174d', nivelMin: 3 },
+];
+
+const AC_POS = [
+  { x: 30, y: 15.25 },
+  { x: 70, y: 15.25 },
+  { x: 52, y: 15.25 },
+  { x: 8, y: 15.25 },
+  { x: 44, y: 46.1 },
+];
+const CFTV_POS = [
+  { x: 21, y: 16 },
+  { x: 59, y: 16 },
+  { x: 21, y: 44 },
+  { x: 59, y: 44 },
+];
+
+// ============================================================================
+// CACHES ESTÁTICOS (chão / móveis / paredes) — pré-renderizados uma única vez
+// ============================================================================
+let cacheChao: HTMLCanvasElement | null = null;
+let cacheMoveis: HTMLCanvasElement | null = null;
+let cacheParedes: HTMLCanvasElement | null = null;
+const CACHE_VERSION = 70;
+let versaoConstruida = 0;
+
+function novoCanvas(): { c: HTMLCanvasElement; x: CanvasRenderingContext2D } {
+  const c = document.createElement('canvas');
+  c.width = WORLD_W;
+  c.height = WORLD_H;
+  const x = c.getContext('2d')!;
+  x.imageSmoothingEnabled = false;
+  return { c, x };
+}
+
+const PALETAS: Record<string, string[]> = {
+  estudio: ['#322b4a', '#413860', '#51477a'],
+  adm: ['#2c2a4a', '#3a3760'],
+  noc: ['#262d4d', '#333c66', '#414b80'],
+  estoque: ['#3a3846', '#4a4760'],
+  wc_cliente: ['#3d4a63', '#4d5c7a', '#5d6d8c'],
+  wc_func: ['#3d4a63', '#4d5c7a', '#5d6d8c'],
+  servico: ['#33303f', '#403c52'],
+  bomboniere: ['#613b4a', '#7a4a4c'],
+  lounge: ['#4a2b2f', '#6b3f3a', '#7c4a40', '#8e5848'],
+  salao: ['#3d2a48', '#563a5c'],
+  corredor: ['#2f2b45', '#3b3658'],
+  vip: ['#201c33', '#34304a'],
+  arena: ['#2d2b47', '#3d3a5e', '#4d4a74'],
+  recepcao: ['#5e3530', '#83503f', '#95604b', '#a77058'],
+  expansao: ['#2b2838', '#363248'],
+};
+
+function pisoDaSala(f: CanvasRenderingContext2D, s: Sala) {
+  const p = PALETAS[s.id] ?? ['#333', '#444', '#555', '#666'];
+  const x = t(s.x);
+  const y = t(s.y);
+  const w = t(s.w);
+  const h = t(s.h);
+  switch (s.piso) {
+    case 'AZULEJO':
+      if (s.id === 'bomboniere') {
+        pxRect(f, x, y, w, h, '#3a2a40');
+        for (let ty = y; ty < y + h; ty += TILE_SIZE) {
+          for (let tx = x; tx < x + w; tx += TILE_SIZE) {
+            const alt = ((tx - x) / TILE_SIZE + (ty - y) / TILE_SIZE) % 2 === 0;
+            pxRect(f, tx + 2, ty + 2, TILE_SIZE - 4, TILE_SIZE - 4, alt ? p[1] : p[0]);
+          }
+        }
+      } else {
+        fillCeramicTiles32x32(f, x, y, w, h, p[0], p[1], p[2] ?? p[1]);
+      }
+      break;
+    case 'MADEIRA':
+      fillWoodTiles32x32(f, x, y, w, h, p[0], p[1], p[2] ?? p[1], p[3] ?? p[1]);
+      break;
+    case 'CARPETE':
+      fillCarpet(f, x, y, w, h, p[0], p[1]);
+      break;
+    default:
+      fillConcrete(f, x, y, w, h, p[0], p[1]);
+  }
+}
+
+function construirChao() {
+  const { c, x: f } = novoCanvas();
+
+  // Quintal em xadrez
+  pxRect(f, 0, 0, WORLD_W, WORLD_H, '#1c3a31');
+  for (let ty = 0; ty < WORLD_H / TILE_SIZE; ty++) {
+    for (let tx = 0; tx < WORLD_W / TILE_SIZE; tx++) {
+      if ((tx + ty) % 2 === 0) pxRect(f, tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE, '#234537');
+    }
+  }
+
+  // Calçada (y 52..56) e rua (y 56..64)
+  fillCeramicTiles32x32(f, 0, t(52), WORLD_W, t(4), '#2f2945', '#443d63', '#544c78');
+  pxRect(f, 0, t(56), WORLD_W, 4, '#64748b');
+  pxRect(f, 0, t(56) + 4, WORLD_W, t(8) - 4, '#1a1829');
+  for (let rx = 32; rx < WORLD_W; rx += 96) {
+    if (rx > t(36) && rx < t(44)) continue;
+    pxRect(f, rx, t(60), 48, 4, '#facc15');
+  }
+  for (let cy = t(56) + 10; cy < t(64) - 10; cy += 22) {
+    pxBox(f, t(38.2), cy, t(3.6), 10, '#f1f5f9', PX_OUTLINE, 2);
+  }
+
+  // Sombra do complexo
+  pxRect(f, t(4) - 6, t(4) - 6, t(80) + 12, t(48) + 12, 'rgba(20, 14, 28, 0.35)');
+
+  SALAS.forEach((s) => pisoDaSala(f, s));
+
+  // Passadeiras neon
+  pxBox(f, t(39), t(15.3), t(2), t(29.4), '#2a2640', '#38bdf8', 2); // espinha do salão
+  pxBox(f, t(60.7), t(15.3), t(1.6), t(36.4), '#2a2640', '#38bdf8', 2); // corredor leste
+  pxBox(f, t(38.5), t(45.3), t(3), t(6.6), '#7a2f45', '#e09f87', 2); // recepção
+  pxBox(f, t(5), t(13.4), t(78), 4, '#facc15', '#facc15', 2); // faixa amarela de serviço
+
+  // Tapete do lounge e palco e-sports
+  drawRug(f, t(8), t(38.4), t(8), t(4.4), '#4c1d5c', '#f472b6');
+  pxBox(f, t(75.4), t(36.6), t(8.2), t(9.6), '#1e1b4b', '#facc15', 2);
+  pxRect(f, t(75.4) + 6, t(36.6) + 6, t(8.2) - 12, t(9.6) - 12, '#312e81');
+
+  // Zona de expansão (obras)
+  const ex = t(84);
+  const ey = t(4);
+  for (let i = 0; i < t(10); i += 24) {
+    pxRect(f, ex + i, ey, 12, 6, '#facc15');
+    pxRect(f, ex + i, t(52) - 6, 12, 6, '#facc15');
+  }
+  for (let i = 0; i < t(48); i += 24) {
+    pxRect(f, ex + t(10) - 6, ey + i, 6, 12, '#facc15');
+  }
+
+  // Tapetes de soleira nas portas
+  PORTAS.forEach((p) => {
+    const larg = t(p.largura);
+    if (p.orientacao === 'H') {
+      pxBox(f, t(p.x) - larg / 2, t(p.y) - 8, larg, 16, '#334155', '#38bdf8', 2);
+    } else {
+      pxBox(f, t(p.x) - 8, t(p.y) - larg / 2, 16, larg, '#334155', '#38bdf8', 2);
+    }
+  });
+
+  cacheChao = c;
+}
+
+function construirMoveis() {
+  const { c, x: m } = novoCanvas();
+
+  // ---------------- EXTERIOR ----------------
+  for (let bx = 24; bx < WORLD_W - 24; bx += 52) drawLushBush(m, bx, t(2.4), bx / 52);
+  for (let by = t(5); by < t(51); by += 70) {
+    drawLushBush(m, 24, by, by / 70);
+    drawLushBush(m, WORLD_W - 28, by, by / 70 + 1);
+  }
+  [10, 30, 56, 80, 92].forEach((tx, i) => drawPixelExteriorTree(m, t(tx), t(2.6 + (i % 2) * 0.6)));
+  [8, 24, 48, 64, 86].forEach((tx) => drawStreetLamp(m, t(tx), t(55.4)));
+  drawBench(m, t(22) - 28, t(52.6));
+  drawBench(m, t(56) - 28, t(52.6));
+  drawCleanPlant(m, t(37.4), t(53.2));
+  drawCleanPlant(m, t(42.6), t(53.2));
+  drawFoodTruck(m, t(67), t(56.5));
+  drawNeonSign(m, t(40), t(52.15), 160, 'LAN HOUSE', '#c084fc', 'bold 13px "Chakra Petch", monospace');
+
+  // ---------------- ESTÚDIO LIVE (x4..20,y4..12) ----------------
+  pxBox(m, t(5), t(5), t(14), t(3.4), '#6a5f8a', PX_OUTLINE, 2);
+  pxBox(m, t(8), t(4.3), t(8), t(0.9), '#334155', PX_OUTLINE, 2);
+  pxRect(m, t(8) + 6, t(4.3) + 6, t(8) - 12, t(0.9) - 12, '#38bdf8');
+  pxBox(m, t(9.5), t(5.6), t(5), t(1.1), '#cfd6e6', PX_OUTLINE, 2);
+  pxRect(m, t(9.5) + 4, t(5.6) + 4, t(5) - 8, 8, '#f8fafc');
+  pxRect(m, t(10.2), t(6.3), t(3.6), 4, '#38bdf8');
+  [5.6, 18.4].forEach((lx) => {
+    pxBox(m, t(lx) - 6, t(9) - 20, 12, 30, '#475569', PX_OUTLINE, 2);
+    pxBox(m, t(lx) - 10, t(9) - 30, 20, 12, '#fde68a', PX_OUTLINE, 2);
+  });
+  drawSofa(m, t(5.5), t(8.8), t(5), t(1), '#7c3aed');
+  drawCleanPlant(m, t(18.4), t(10.8));
+  drawCleanPlant(m, t(5.4), t(10.9));
+
+  // ---------------- ADMINISTRAÇÃO (x20..36) ----------------
+  pxBox(m, t(26), t(5.2), t(5), t(1.5), '#8c5832', PX_OUTLINE, 2);
+  pxRect(m, t(26) + 4, t(5.2) + 4, t(5) - 8, 12, '#b87a4b');
+  pxBox(m, t(27.4), t(4.6), 32, 18, '#475569', PX_OUTLINE, 2);
+  pxRect(m, t(27.4) + 4, t(4.6) + 4, 24, 10, '#38bdf8');
+  drawCleanChair(m, t(28.5), t(7.3), 'BLUE');
+  drawTallShelf(m, t(21), t(4.4), t(3.4), 50);
+  drawTallShelf(m, t(24.6), t(4.4), t(1.2), 50);
+  pxBox(m, t(32), t(4.4), t(3), t(1.4), '#f8fafc', PX_OUTLINE, 2);
+  pxRect(m, t(32) + 6, t(4.4) + 8, t(3) - 12, 3, '#ef4444');
+  pxRect(m, t(32) + 6, t(4.4) + 16, t(3) - 20, 3, '#22c55e');
+  drawCleanChair(m, t(22), t(10.4), 'RED');
+  drawCleanChair(m, t(24), t(10.4), 'BLUE');
+  drawCleanPlant(m, t(34.6), t(10.8));
+
+  // ---------------- NOC (x36..52): racks são dinâmicos ----------------
+  pxBox(m, t(48.2), t(5.4), t(3.4), t(1.5), '#cfd6e0', PX_OUTLINE, 2);
+  pxBox(m, t(48.8), t(5.6), 40, 18, '#15803d', PX_OUTLINE, 2);
+  for (let i = 0; i < 5; i++) {
+    pxRect(m, t(37.5 + i * 2), t(7.55), 3, 26, i % 2 === 0 ? '#38bdf8' : '#a855f7'); // cabos
+  }
+  pxRect(m, t(37.5), t(7.55) + 26, t(8.2), 3, '#475569');
+
+  // ---------------- ESTOQUE (x52..68) ----------------
+  drawTallShelf(m, t(53), t(4.4), t(5), 62);
+  drawTallShelf(m, t(62), t(4.4), t(5.4), 62);
+  pxBox(m, t(53.2), t(8), 34, 28, '#d99b52', PX_OUTLINE, 2);
+  pxBox(m, t(54.4), t(8.5), 30, 24, '#c4863f', PX_OUTLINE, 2);
+  pxBox(m, t(63), t(8.1), t(4), 14, '#8c5832', PX_OUTLINE, 2); // palete
+  pxBox(m, t(63.2), t(8.1) - 22, 30, 22, '#d99b52', PX_OUTLINE, 2);
+
+  // ---------------- BANHEIROS ----------------
+  drawWcStall(m, t(68.7), t(4.4));
+  drawWcStall(m, t(73.3), t(4.4));
+  drawSink(m, t(69), t(10.6));
+  drawSink(m, t(73.2), t(10.6));
+  drawWcStall(m, t(76.7), t(4.4));
+  drawWcStall(m, t(81.3), t(4.4));
+  drawSink(m, t(77), t(10.6));
+  drawSink(m, t(81.2), t(10.6));
+
+  // ---------------- CORREDOR DE SERVIÇO ----------------
+  drawExtinguisher(m, t(5.5), t(12.2));
+  drawExtinguisher(m, t(82.4), t(12.2));
+  [18, 34, 52, 66, 76].forEach((px) => drawCleanPlant(m, t(px), t(14.3)));
+  for (let i = 0; i < 18; i++) {
+    pxRect(m, t(6) + i * 54, t(14.5) + (i % 2) * 4, 36, 2, i % 3 === 0 ? '#a855f7' : '#22d3ee');
+  }
+
+  // ---------------- BOMBONIERE (x4..20,y15..31) ----------------
+  drawCleanVendingMachine(m, t(5.2), t(15.35));
+  drawCleanVendingMachine(m, t(6.9), t(15.35));
+  drawTallShelf(m, t(9), t(15.4), t(2.2), 44);
+  drawRamenAndMicrowaveStation(m, t(14.2), t(16.3));
+  [[5.4, 22.4], [15, 22.4], [10.6, 27.4]].forEach(([tx, ty]) => {
+    drawCleanChair(m, t(tx) + 6, t(ty) - 10, 'RED');
+    drawCleanChair(m, t(tx) + 84, t(ty) - 10, 'BLUE');
+    pxBox(m, t(tx), t(ty), t(3), t(1.5), '#57534e', PX_OUTLINE, 2);
+    pxRect(m, t(tx) + 4, t(ty) + 4, t(3) - 8, t(1.5) - 8, '#78716c');
+    pxBox(m, t(tx) + 30, t(ty) + 14, 8, 10, '#ef4444', PX_OUTLINE, 2);
+  });
+  drawCleanPlant(m, t(5), t(29.6));
+  drawCleanPlant(m, t(19), t(29.6));
+
+  // ---------------- LOUNGE (x4..20,y31..52) ----------------
+  drawCleanVendingMachine(m, t(5.2), t(31.7));
+  drawSofa(m, t(5), t(36.6), t(4), t(1.4), '#0e7490');
+  drawSofa(m, t(15), t(36.6), t(4), t(1.4), '#be185d');
+  pxBox(m, t(10.4), t(43.2), t(3.2), t(1.3), '#8c5832', PX_OUTLINE, 2);
+  drawCleanPlant(m, t(5.2), t(44.6));
+  drawCleanPlant(m, t(18.8), t(44.6));
+  drawNeonSign(m, t(12), t(50.6), 100, 'LOUNGE', '#2dd4bf', 'bold 10px "Chakra Petch", monospace');
+
+  // ---------------- SALÃO GAMER (x20..60,y15..45) ----------------
+  [[22, 'f472b6'], [26, '38bdf8'], [30, 'facc15'], [34, 'a855f7']].forEach(([px, cor], i) => {
+    drawPoster(m, t(px as number), t(15.3), i % 2 === 0 ? '#' + cor : '#1e293b', '#' + cor);
+  });
+  [46, 50, 54].forEach((px, i) => drawPoster(m, t(px), t(15.3), i % 2 ? '#22d3ee' : '#f43f5e', '#facc15'));
+  drawLedStrip(m, t(21), t(16.7), t(18), '#22d3ee');
+  drawLedStrip(m, t(41.2), t(16.7), t(18), '#f472b6');
+  [[21.3, 16.8], [58.7, 16.8], [21.3, 43.6], [58.7, 43.6]].forEach(([px, py]) => drawCleanPlant(m, t(px), t(py)));
+  drawCleanVendingMachine(m, t(55.6), t(15.5));
+  // zona de máquinas no canto sudeste
+  pxBox(m, t(44.4), t(38.6), 30, 44, '#7e22ce', PX_OUTLINE, 2);
+  pxRect(m, t(44.4) + 4, t(38.6) + 6, 22, 14, '#fde047');
+  pxBox(m, t(47), t(38.6), 30, 44, '#0e7490', PX_OUTLINE, 2);
+  pxRect(m, t(47) + 4, t(38.6) + 6, 22, 14, '#fbcfe8');
+  drawCleanVendingMachine(m, t(52), t(38.4));
+  drawBench(m, t(24), t(41.6), 96);
+  drawBench(m, t(32), t(41.6), 96);
+  drawNeonSign(m, t(32), t(15.15), 150, 'GAMING ARENA', '#22d3ee', 'bold 11px "Chakra Petch", monospace');
+
+  // ---------------- CORREDOR LESTE (x60..63) ----------------
+  drawExtinguisher(m, t(60.2), t(16));
+  drawCleanPlant(m, t(61.5), t(43.8));
+  drawCleanPlant(m, t(61.5), t(31.6));
+  drawBench(m, t(60.5), t(24), 40);
+
+  // ---------------- RECEPÇÃO (x20..60,y45..52) ----------------
+  pxRect(m, t(22) + 2, t(48.4), t(15), 4, PX_SHADOW);
+  pxBox(m, t(22), t(47), t(15), t(1.4), '#c88a4b', PX_OUTLINE, 2);
+  pxRect(m, t(22) + 4, t(47) + 4, t(15) - 8, 14, '#e8c482');
+  [25, 29.5, 34].forEach((mx) => {
+    pxBox(m, t(mx), t(46.5), 26, 18, '#475569', PX_OUTLINE, 2);
+    pxRect(m, t(mx) + 4, t(46.5) + 4, 18, 10, '#38bdf8');
+  });
+  pxBox(m, t(22), t(46), t(0.8), t(2.6), '#e0b878', PX_OUTLINE, 2);
+  drawPixSelfServiceKiosk(m, t(50), t(47.6));
+  drawCleanVendingMachine(m, t(52.6), t(45.6));
+  drawCleanVendingMachine(m, t(54.6), t(45.6));
+  [26.5, 30, 33.5].forEach((px) => {
+    pxBox(m, t(px), t(49.1), 6, 22, '#facc15', PX_OUTLINE, 2);
+  });
+  pxRect(m, t(26.5) + 6, t(49.1) + 8, t(3.5) - 6, 3, '#ef4444');
+  pxRect(m, t(30) + 6, t(49.1) + 8, t(3.5) - 6, 3, '#ef4444');
+  drawCleanPlant(m, t(21.6), t(50.8));
+  drawCleanPlant(m, t(58.6), t(50.8));
+  drawNeonSign(m, t(32), t(45.35), 120, 'CAIXA PIX', '#38bdf8', 'bold 10px "Chakra Petch", monospace');
+
+  // ---------------- VIP (x63..84,y15..33) ----------------
+  drawNeonSign(m, t(73), t(15.25), 190, 'GAME ON VIP', '#e879f9', 'bold 14px "Chakra Petch", monospace');
+  drawPoster(m, t(65), t(15.3), '#a855f7', '#facc15');
+  drawPoster(m, t(79.6), t(15.3), '#f43f5e', '#22d3ee');
+  drawSofa(m, t(82.3), t(22.6), t(1.5), t(3.8), '#7e22ce');
+  pxBox(m, t(81.5), t(24), 14, 30, '#3b2d54', '#facc15', 2);
+  drawCleanPlant(m, t(64.8), t(31.4));
+  drawCleanPlant(m, t(82.7), t(31.4));
+  drawCleanVendingMachine(m, t(64.1), t(29.4));
+  drawLedStrip(m, t(64.2), t(16.9), t(19.5), '#c084fc');
+
+  // ---------------- ARENA: CONSOLES & E-SPORTS (x63..84,y33..52) ----------------
+  pxBox(m, t(77), t(33.7), t(6.6), t(1.8), '#1e293b', PX_OUTLINE, 2);
+  pxRect(m, t(77) + 6, t(33.7) + 6, t(6.6) - 12, t(1.8) - 12, '#0284c7');
+  pxBox(m, t(79.2), t(34.1), 40, 14, '#facc15', PX_OUTLINE, 2);
+  pxBox(m, t(76.2), t(38.2), t(3.6), t(1.2), '#2563eb', PX_OUTLINE, 2);
+  pxBox(m, t(80.2), t(38.2), t(3.6), t(1.2), '#dc2626', PX_OUTLINE, 2);
+  pxBox(m, t(76.2), t(43.3), t(3.6), t(1.2), '#2563eb', PX_OUTLINE, 2);
+  pxBox(m, t(80.2), t(43.3), t(3.6), t(1.2), '#dc2626', PX_OUTLINE, 2);
+  pxBox(m, t(82.6), t(40.3), 20, 28, '#facc15', PX_OUTLINE, 2); // troféu
+  pxBox(m, t(65.4), t(50.1), t(6.6), t(1.3), '#334155', PX_OUTLINE, 2); // TV 85"
+  pxRect(m, t(65.4) + 6, t(50.1) + 6, t(6.6) - 12, t(1.3) - 12, '#2563eb');
+  drawSofa(m, t(64.8), t(47.7), t(6), t(1.3), '#475569');
+  [66.5, 69, 71.5].forEach((px, i) => drawCleanChair(m, t(px), t(43.8), i % 2 === 0 ? 'BLUE' : 'RED'));
+  drawCleanPlant(m, t(83), t(50.6));
+  drawNeonSign(m, t(74), t(33.15), 170, 'E-SPORTS ARENA', '#facc15', 'bold 11px "Chakra Petch", monospace');
+
+  // ---------------- ZONA DE EXPANSÃO ----------------
+  pxBox(m, t(85), t(24), t(8), t(4), '#1e1b2e', '#facc15', 2);
+  m.font = 'bold 14px "Chakra Petch", monospace';
+  m.textAlign = 'center';
+  m.fillStyle = '#facc15';
+  m.fillText('EM BREVE', t(89), t(25.5));
+  m.font = 'bold 10px "Chakra Petch", monospace';
+  m.fillStyle = '#f8fafc';
+  m.fillText('ZONA DE EXPANSÃO', t(89), t(26.9));
+  m.textAlign = 'start';
+  [[86, 31], [92, 31], [86, 20], [92, 20]].forEach(([px, py]) => {
+    pxBox(m, t(px), t(py), 14, 22, '#f97316', PX_OUTLINE, 2);
+    pxRect(m, t(px) + 2, t(py) + 8, 10, 4, '#f8fafc');
+  });
+
+  cacheMoveis = c;
+}
+
+function construirParedes() {
+  const { c, x: w } = novoCanvas();
+
+  const eixoX = (cel: number) => cel * (TILE_SIZE / 2);
+  const ehPerimetro = (o: 'H' | 'V', linha: number) => {
+    const tl = linha / 2;
+    return o === 'H' ? tl === 4 || tl === 52 : tl === 4 || tl === 84;
+  };
+  const ehVidro = (o: 'H' | 'V', linha: number, ini: number, fim: number) => {
+    const tl = linha / 2;
+    const centro = (ini + fim) / 4;
+    return PAREDES_VIDRO.some((v) =>
+      o === 'H'
+        ? v.y1 === tl && v.y2 === tl && centro >= v.x1 && centro <= v.x2
+        : v.x1 === tl && v.x2 === tl && centro >= v.y1 && centro <= v.y2
+    );
+  };
+
+  segmentosDeParede().forEach((seg) => {
+    const perim = ehPerimetro(seg.orientacao, seg.linha);
+    const vidro = !perim && ehVidro(seg.orientacao, seg.linha, seg.ini, seg.fim);
+    const esp = perim ? 8 : vidro ? 4 : 6;
+    const cor = vidro ? PX_GLASS_WALL : PX_WALL_SLIM;
+    if (seg.orientacao === 'H') {
+      const y = eixoX(seg.linha);
+      const x1 = eixoX(seg.ini) - esp / 2;
+      const ww = eixoX(seg.fim) - eixoX(seg.ini) + esp;
+      pxRect(w, x1, y + esp / 2, ww, 3, PX_SHADOW);
+      pxBox(w, x1, y - esp / 2, ww, esp, cor, PX_OUTLINE, 1.5);
+    } else {
+      const x = eixoX(seg.linha);
+      const y1 = eixoX(seg.ini);
+      const hh = eixoX(seg.fim) - eixoX(seg.ini);
+      pxRect(w, x + esp / 2, y1, 3, hh, PX_SHADOW);
+      pxBox(w, x - esp / 2, y1, esp, hh, cor, PX_OUTLINE, 1.5);
+    }
+  });
+
+  // Placas de identificação dos cômodos (alinhadas à esquerda, longe das portas)
+  w.font = 'bold 7px "Chakra Petch", monospace';
+  w.textAlign = 'start';
+  SALAS.forEach((s) => {
+    if (s.tipo === 'EXPANSAO' || s.tipo === 'CORREDOR') return;
+    const largTxt = snap2(w.measureText(s.nome).width + 12);
+    const px = t(s.x) + 10;
+    const py = t(s.y) + 8;
+    pxBox(w, px, py, largTxt, 12, 'rgba(18, 13, 38, 0.85)', PX_OUTLINE, 1.5);
+    pxRect(w, px + 2, py + 2, largTxt - 4, 1.5, s.cor);
+    w.fillStyle = '#f8fafc';
+    w.fillText(s.nome, px + 6, py + 9);
+  });
+
+  cacheParedes = c;
+}
+
+function garantirCaches() {
+  if (cacheChao && cacheMoveis && cacheParedes && versaoConstruida === CACHE_VERSION) return;
+  construirChao();
+  construirMoveis();
+  construirParedes();
+  versaoConstruida = CACHE_VERSION;
+}
+
+function desenharCache(ctx: CanvasRenderingContext2D, cache: HTMLCanvasElement | null, v: VistaMundo) {
+  if (!cache) return;
+  const sx = Math.max(0, Math.floor(v.x1));
+  const sy = Math.max(0, Math.floor(v.y1));
+  const ex = Math.min(WORLD_W, Math.ceil(v.x2));
+  const ey = Math.min(WORLD_H, Math.ceil(v.y2));
+  if (ex <= sx || ey <= sy) return;
+  ctx.drawImage(cache, sx, sy, ex - sx, ey - sy, sx, sy, ex - sx, ey - sy);
+}
+
+// ============================================================================
+// CAMADAS PÚBLICAS DE RENDER
+// ============================================================================
+
+/** Camada 1+2: chão e móveis estáticos (com culling pela vista da câmera) */
+export function renderChaoEMoveis(ctx: CanvasRenderingContext2D, vista: VistaMundo) {
+  garantirCaches();
+  ctx.imageSmoothingEnabled = false;
+  desenharCache(ctx, cacheChao, vista);
+  desenharCache(ctx, cacheMoveis, vista);
+}
+
+export function renderGrade(ctx: CanvasRenderingContext2D, vista: VistaMundo) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.22)';
+  ctx.lineWidth = 1;
+  const x0 = Math.max(0, Math.floor(vista.x1 / TILE_SIZE) * TILE_SIZE);
+  const y0 = Math.max(0, Math.floor(vista.y1 / TILE_SIZE) * TILE_SIZE);
+  ctx.beginPath();
+  for (let gx = x0; gx <= Math.min(WORLD_W, vista.x2); gx += TILE_SIZE) {
+    ctx.moveTo(gx, y0);
+    ctx.lineTo(gx, Math.min(WORLD_H, vista.y2));
+  }
+  for (let gy = y0; gy <= Math.min(WORLD_H, vista.y2); gy += TILE_SIZE) {
+    ctx.moveTo(x0, gy);
+    ctx.lineTo(Math.min(WORLD_W, vista.x2), gy);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Camada 3: PCs animados, racks, fliperamas e melhorias evolutivas */
+export function renderPcsEMelhorias(
   ctx: CanvasRenderingContext2D,
   computadores: Computador[],
   hoveredPc: number | null,
   tick: number,
-  scale = 1,
-  parallax: ParallaxOffsets2D = { camX: 0, camY: 0 },
-  mostrarGrade32x32 = false,
-  melhorias: MelhoriaEstabelecimento[] = []
+  melhorias: MelhoriaEstabelecimento[],
+  vista: VistaMundo
 ) {
-  ensureParallaxCachesBuilt(scale);
   ctx.imageSmoothingEnabled = false;
+  const nPcs = nivelMelhoria(melhorias, 'eq_pcs');
+  const nMon = nivelMelhoria(melhorias, 'eq_monitor');
 
-  const { camX, camY } = parallax;
-
-  // LAYER 0 (PARALLAX 0.20x): HORIZONTE & NUVENS
-  ctx.save();
-  const skyShiftX = snap2(camX * 0.2);
-  pxRect(ctx, 0, 0, 1280, 56, '#191d30');
-  pxRect(ctx, 0, 56, 1280, 44, '#252b45');
-
-  for (let i = 0; i < 24; i++) {
-    const sx = snap2(((i * 97 + skyShiftX) % 1280 + 1280) % 1280);
-    const sy = snap2(8 + ((i * 23) % 42));
-    pxRect(ctx, sx, sy, 2, 2, (tick + i * 7) % 40 < 20 ? '#fef08a' : '#64748b');
-  }
-
-  const farShiftX = snap2(camX * 0.28);
-  for (let bx = -64; bx < 1344; bx += 64) {
-    const h = snap2(28 + ((Math.abs(bx) * 17) % 32));
-    const drawX = snap2(bx + farShiftX);
-    pxBox(ctx, drawX, 96 - h, 56, h, '#232942', '#121626', 2);
-  }
-  ctx.restore();
-
-  // LAYER 1 (PARALLAX 0.55x): PISO EM TILES 32x32
-  const floorShiftX = Math.round(snap2(camX * 0.55) * scale);
-  const floorShiftY = Math.round(snap2(camY * 0.55) * scale);
-  if (floorParallaxCache) {
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, floorShiftX, floorShiftY);
-    ctx.drawImage(floorParallaxCache, 0, 0);
-    ctx.restore();
-  }
-
-  // Opcional: Malha Visual 32x32
-  if (mostrarGrade32x32) {
-    ctx.save();
-    ctx.translate(snap2(camX * 0.55), snap2(camY * 0.55));
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.22)';
-    ctx.lineWidth = 1;
-    for (let gx = 0; gx <= 1280; gx += TILE_SIZE) {
-      ctx.beginPath();
-      ctx.moveTo(gx, 0);
-      ctx.lineTo(gx, 768);
-      ctx.stroke();
-    }
-    for (let gy = 0; gy <= 768; gy += TILE_SIZE) {
-      ctx.beginPath();
-      ctx.moveTo(0, gy);
-      ctx.lineTo(1280, gy);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  // LAYER 2 (PARALLAX 0.80x): MOBILIÁRIO 32x32 & 18 PCs
-  const midShiftX = snap2(camX * 0.8);
-  const midShiftY = snap2(camY * 0.8);
-  if (furnitureParallaxCache) {
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, Math.round(midShiftX * scale), Math.round(midShiftY * scale));
-    ctx.drawImage(furnitureParallaxCache, 0, 0);
-    ctx.restore();
-  }
-
-  ctx.save();
-  ctx.translate(midShiftX, midShiftY);
-
-  // Racks NOC (em y = 120..160, deixando y = 192 livre para o Técnico!)
-  [704, 748].forEach((rx, rIdx) => {
-    pxBox(ctx, rx, 120, 32, 42, '#334155', PX_OUTLINE, 2);
-    for (let b = 0; b < 4; b++) {
-      pxBox(ctx, rx + 4, 124 + b * 9, 24, 6, '#1e293b', PX_OUTLINE, 2);
-      const ledOn = (Math.floor(tick / 6) + b * 2 + rIdx) % 3 !== 0;
-      pxRect(ctx, rx + 6, 126 + b * 9, 4, 2, ledOn ? '#4ade80' : '#0f172a');
-    }
+  // Racks do NOC
+  [38.4, 40, 41.6, 44.5, 46.1].forEach((rx, i) => {
+    if (dentroDaVista(vista, t(rx), t(6))) drawRack(ctx, t(rx), tick, i);
   });
 
-  // 3 Fliperamas e TV 85" na parede norte da Sala de Consoles (y = 442..474, deixando y = 512 livre!)
-  [880, 904, 928].forEach((ax, i) => {
-    const cabColor = i === 0 ? '#6d28d9' : i === 1 ? '#1d4ed8' : '#be185d';
-    pxBox(ctx, ax, 442, 20, 32, cabColor, PX_OUTLINE, 2);
-    pxRect(ctx, ax + 4, 448, 12, 8, (tick + i * 7) % 20 < 10 ? '#38bdf8' : '#f472b6');
+  // Fliperamas
+  const nCon = nivelMelhoria(melhorias, 'eq_console');
+  ARCADES.forEach((a, i) => {
+    if (a.nivelMin && nCon < a.nivelMin) return;
+    if (dentroDaVista(vista, t(a.x), t(a.y))) drawArcadeCabinet(ctx, t(a.x), t(a.y), a.cor, tick, i);
   });
-  pxBox(ctx, 956, 442, 64, 18, '#334155', PX_OUTLINE, 2);
-  pxRect(ctx, 960, 446, 56, 10, tick % 40 < 20 ? '#2563eb' : '#10b981');
 
-  // 18 Estações de Computadores Modulares (Clean & Focadas)
+  // PCs
   computadores.slice(0, 24).forEach((pc) => {
     const seatNode = WAYPOINT_NODES[nodoAssentoDoPc(pc.numero)];
     if (!seatNode) return;
+    if (!dentroDaVista(vista, seatNode.x, seatNode.y)) return;
 
     const sx = snap2(seatNode.x);
     const sy = snap2(seatNode.y);
     const mx = sx;
     const my = sy - 22;
-    const isHovered = hoveredPc === pc.numero;
     const ehVip = pc.area === 'VIP';
+    const isHovered = hoveredPc === pc.numero;
+
+    drawPcStation(ctx, mx, my, tick, pc, nPcs, nMon);
+    drawPixelGamingChair(ctx, sx, sy, ehVip);
 
     const badgeBorder =
       pc.status === 'MANUTENCAO' ? '#fb923c' : pc.status === 'OCUPADO' ? (ehVip ? '#c084fc' : '#38bdf8') : '#4ade80';
-    drawPcStation(ctx, mx, my, tick, pc, nivelMelhoria(melhorias, 'eq_pcs'), nivelMelhoria(melhorias, 'eq_monitor'));
-
-    drawPixelGamingChair(ctx, sx, sy, ehVip);
 
     if (isHovered) {
-      pxBox(ctx, mx - 20, my - 20, 44, 44, 'rgba(250, 204, 21, 0.16)', '#facc15', 2);
+      pxBox(ctx, mx - 22, my - 22, 48, 50, 'rgba(250, 204, 21, 0.16)', '#facc15', 2);
     }
 
-    // Tag Slim do PC
-    pxBox(ctx, mx - 16, my - 20, 32, 9, '#1e1b2e', badgeBorder, 1.5);
+    pxBox(ctx, mx - 16, my - 24, 32, 9, '#1e1b2e', badgeBorder, 1.5);
     ctx.fillStyle = '#f8fafc';
     ctx.font = 'bold 6px "Chakra Petch", monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(pc.identificacao, mx, my - 13.5);
+    ctx.fillText(pc.identificacao, mx, my - 17.5);
     ctx.textAlign = 'start';
   });
 
-  const swayPx = Math.sin(tick * 0.03) * 2;
-  drawPixelExteriorTree(ctx, 38, 520, swayPx);
-  drawPixelExteriorTree(ctx, 1232, 520, -swayPx);
-
-  // ==========================================================================
-  // EVOLUÇÃO VISUAL DAS MELHORIAS DO ESTABELECIMENTO (níveis 1..5)
-  // ==========================================================================
+  // ==== Melhorias do estabelecimento (níveis 1..5) ====
   const nAr = nivelMelhoria(melhorias, 'inf_ar');
   const nSeg = nivelMelhoria(melhorias, 'inf_seguranca');
   const nEle = nivelMelhoria(melhorias, 'inf_eletrica');
   const nPrint = nivelMelhoria(melhorias, 'eq_print');
-  const nCon = nivelMelhoria(melhorias, 'eq_console');
 
-  // Ar-condicionado split: 1 unidade por nível, com ar frio animado
-  [260, 490, 760, 380, 640].slice(0, nAr).forEach((ax, i) => {
-    pxBox(ctx, ax - 14, 116, 28, 10, '#e2e8f0', PX_OUTLINE, 2);
-    pxRect(ctx, ax - 10, 122, 20, 2, '#38bdf8');
+  AC_POS.slice(0, nAr).forEach((a, i) => {
+    const ax = t(a.x);
+    const ay = t(a.y);
+    if (!dentroDaVista(vista, ax, ay)) return;
+    pxBox(ctx, ax - 14, ay, 28, 10, '#e2e8f0', PX_OUTLINE, 2);
+    pxRect(ctx, ax - 10, ay + 6, 20, 2, '#38bdf8');
     for (let p = 0; p < 3; p++) {
-      const py = 128 + ((tick * 0.6 + p * 9 + i * 5) % 22);
+      const py = ay + 12 + ((tick * 0.6 + p * 9 + i * 5) % 22);
       pxRect(ctx, ax - 8 + p * 8, py, 2, 2, 'rgba(186, 230, 253, 0.8)');
     }
   });
 
-  // Câmeras CFTV: 1 por nível, com LED piscando
-  [
-    [436, 296],
-    [682, 296],
-    [212, 296],
-    [860, 300],
-  ].slice(0, nSeg).forEach(([cx, cy], i) => {
+  CFTV_POS.slice(0, nSeg).forEach((cam, i) => {
+    const cx = t(cam.x);
+    const cy = t(cam.y);
+    if (!dentroDaVista(vista, cx, cy)) return;
     pxBox(ctx, cx - 4, cy - 4, 10, 8, '#1e293b', PX_OUTLINE, 2);
     pxRect(ctx, cx - 6, cy - 2, 4, 4, '#475569');
     pxRect(ctx, cx + 2, cy - 2, 2, 2, (Math.floor(tick / 15) + i) % 2 === 0 ? '#ef4444' : '#14532d');
   });
 
-  // Quadro elétrico trifásico: LEDs acesos conforme o nível
-  if (nEle > 0) {
-    pxBox(ctx, 782, 116, 22, 44, '#334155', PX_OUTLINE, 2);
+  if (nEle > 0 && dentroDaVista(vista, t(37), t(6))) {
+    pxBox(ctx, t(36.5), t(5.3), 22, 44, '#334155', PX_OUTLINE, 2);
     for (let l = 0; l < 5; l++) {
-      pxRect(ctx, 788, 122 + l * 7, 10, 3, l < nEle ? '#facc15' : '#0f172a');
+      pxRect(ctx, t(36.5) + 6, t(5.3) + 6 + l * 7, 10, 3, l < nEle ? '#facc15' : '#0f172a');
     }
   }
 
-  // Central de Impressão Laser: 1 = impressora, 2 = + copiadora, 3 = multifuncional com 2 bandejas
-  if (nPrint > 0) {
-    pxRect(ctx, 458, 244, 34, 4, PX_SHADOW);
-    pxBox(ctx, 458, 222, 32, 22, '#e2e8f0', PX_OUTLINE, 2);
-    pxRect(ctx, 462, 226, 24, 6, '#94a3b8');
-    pxRect(ctx, 466, 238, 16, 4, '#cbd5e1');
-    const saindo = Math.floor(tick / 30) % 2 === 0;
-    if (saindo) pxRect(ctx, 468, 244 + (tick % 30 > 15 ? 4 : 2), 12, 6, '#ffffff');
+  if (nPrint > 0 && dentroDaVista(vista, t(45), t(46.5))) {
+    const px0 = t(43.6);
+    const py0 = t(45.7);
+    pxRect(ctx, px0, py0 + 26, 34, 4, PX_SHADOW);
+    pxBox(ctx, px0, py0, 32, 22, '#e2e8f0', PX_OUTLINE, 2);
+    pxRect(ctx, px0 + 4, py0 + 4, 24, 6, '#94a3b8');
+    pxRect(ctx, px0 + 8, py0 + 16, 16, 4, '#cbd5e1');
+    if (Math.floor(tick / 30) % 2 === 0) pxRect(ctx, px0 + 10, py0 + 22 + (tick % 30 > 15 ? 4 : 2), 12, 6, '#ffffff');
     if (nPrint >= 2) {
-      pxBox(ctx, 494, 218, 26, 26, '#cbd5e1', PX_OUTLINE, 2);
-      pxRect(ctx, 498, 222, 18, 4, '#38bdf8');
+      pxBox(ctx, px0 + 36, py0 - 4, 26, 26, '#cbd5e1', PX_OUTLINE, 2);
+      pxRect(ctx, px0 + 40, py0, 18, 4, '#38bdf8');
     }
     if (nPrint >= 3) {
-      pxRect(ctx, 460, 230, 4, 4, tick % 20 < 10 ? '#4ade80' : '#14532d');
-      pxBox(ctx, 440, 226, 16, 18, '#475569', PX_OUTLINE, 2);
+      pxRect(ctx, px0 + 2, py0 + 12, 4, 4, tick % 20 < 10 ? '#4ade80' : '#14532d');
+      pxBox(ctx, px0 - 20, py0 + 4, 16, 18, '#475569', PX_OUTLINE, 2);
     }
   }
 
-  // Lounge de Consoles: moldura neon + fliperamas/VR extras por nível
+  // Moldura neon do lounge de consoles
   if (nCon > 0) {
     const neon = RGB_CICLO[Math.floor(tick / 20) % RGB_CICLO.length];
-    pxRect(ctx, 870, 440, 164, 2, neon);
-    pxRect(ctx, 870, 580, 164, 2, neon);
-    if (nCon >= 2) {
-      pxBox(ctx, 884, 548, 20, 32, '#0e7490', PX_OUTLINE, 2);
-      pxRect(ctx, 888, 554, 12, 8, (tick + 4) % 20 < 10 ? '#fde047' : '#22d3ee');
-    }
-    if (nCon >= 3) {
-      pxBox(ctx, 908, 548, 20, 32, '#9d174d', PX_OUTLINE, 2);
-      pxRect(ctx, 912, 554, 12, 8, tick % 20 < 10 ? '#f472b6' : '#fde047');
-    }
-    if (nCon >= 4) {
-      pxBox(ctx, 1012, 456, 22, 24, '#1e1b4b', '#a855f7', 2); // Cabine VR
-      pxRect(ctx, 1016, 460, 14, 6, neon);
+    pxRect(ctx, t(64), t(33.5), t(19.5), 2, neon);
+    pxRect(ctx, t(64), t(51.6), t(19.5), 2, neon);
+    if (nCon >= 4 && dentroDaVista(vista, t(82), t(47))) {
+      pxBox(ctx, t(81.6), t(46.6), 22, 26, '#1e1b4b', '#a855f7', 2);
+      pxRect(ctx, t(81.6) + 4, t(46.6) + 4, 14, 6, neon);
     }
   }
+}
 
-  // ==========================================================================
-  // ILUMINAÇÃO NEON: tom noturno roxo + brilho de telas, placas e lâmpadas
-  // ==========================================================================
+/** Camada 5 (primeiro plano): paredes finas + placas dos cômodos */
+export function renderParedes(ctx: CanvasRenderingContext2D, vista: VistaMundo) {
+  garantirCaches();
+  desenharCache(ctx, cacheParedes, vista);
+}
+
+/** Camada 6: iluminação neon (tom noturno + brilho de telas, placas e lâmpadas) */
+export function renderIluminacao(
+  ctx: CanvasRenderingContext2D,
+  tick: number,
+  computadores: Computador[],
+  vista: VistaMundo
+) {
+  const x1 = Math.max(0, vista.x1);
+  const y1 = Math.max(0, vista.y1);
+  const x2 = Math.min(WORLD_W, vista.x2);
+  const y2 = Math.min(WORLD_H, vista.y2);
+  if (x2 <= x1 || y2 <= y1) return;
+
   ctx.save();
   ctx.globalCompositeOperation = 'multiply';
   ctx.fillStyle = 'rgba(200, 180, 240, 0.42)';
-  ctx.fillRect(0, 0, 1280, 768);
+  ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
   ctx.globalCompositeOperation = 'lighter';
+
   const glow = (gx: number, gy: number, r: number, cor: string) => {
+    if (gx + r < x1 || gx - r > x2 || gy + r < y1 || gy - r > y2) return;
     const g = ctx.createRadialGradient(gx, gy, 2, gx, gy, r);
     g.addColorStop(0, cor);
     g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g;
     ctx.fillRect(gx - r, gy - r, r * 2, r * 2);
   };
+
   computadores.slice(0, 24).forEach((pc) => {
-    if (pc.status === 'OCUPADO') {
-      const seat = WAYPOINT_NODES[nodoAssentoDoPc(pc.numero)];
-      if (!seat) return;
-      glow(seat.x, seat.y - 28, 44, pc.area === 'VIP' ? 'rgba(168,85,247,0.30)' : 'rgba(56,189,248,0.26)');
-    }
+    if (pc.status !== 'OCUPADO') return;
+    const seat = WAYPOINT_NODES[nodoAssentoDoPc(pc.numero)];
+    if (!seat) return;
+    glow(seat.x, seat.y - 28, 48, pc.area === 'VIP' ? 'rgba(168,85,247,0.30)' : 'rgba(56,189,248,0.26)');
   });
-  [150, 420, 700, 980, 1180].forEach((lx) => glow(lx, 590, 70, 'rgba(251,191,36,0.30)'));
-  glow(576, 600, 110, 'rgba(192,132,252,0.36)');
-  glow(1100, 160, 90, 'rgba(250,204,21,0.18)');
-  glow(950, 480, 80, 'rgba(244,114,182,0.16)');
-  ctx.restore();
 
-  ctx.restore();
-}
-
-export function renderDoorwayLintelsAndLabels(
-  ctx: CanvasRenderingContext2D,
-  tick = 0,
-  scale = 1,
-  parallax: ParallaxOffsets2D = { camX: 0, camY: 0 }
-) {
-  ensureParallaxCachesBuilt(scale);
-  ctx.imageSmoothingEnabled = false;
-
-  const { camX, camY } = parallax;
-  const capShiftX = snap2(camX * 1.02);
-  const capShiftY = snap2(camY * 1.02);
-
-  if (wallCapParallaxCache) {
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, Math.round(capShiftX * scale), Math.round(capShiftY * scale));
-    ctx.drawImage(wallCapParallaxCache, 0, 0);
-    ctx.restore();
-  }
-
-  ctx.save();
-  ctx.translate(capShiftX, capShiftY);
-
-  // Etiquetas Minimalistas & Clean no topo de cada setor (sem tapar paredes ou portas!)
-  const placasClean = [
-    { x: 144, y: 94, txt: 'DECK GAMER', cor: '#2dd4bf' },
-    { x: 320, y: 94, txt: 'ESTÚDIO & ADM', cor: '#f472b6' },
-    { x: 556, y: 94, txt: 'RECEPÇÃO PIX', cor: '#38bdf8' },
-    { x: 774, y: 94, txt: 'NOC SERVIDORES', cor: '#4ade80' },
-    { x: 952, y: 94, txt: 'BOMBONIERE', cor: '#f472b6' },
-    { x: 1112, y: 94, txt: 'PALCO E-SPORTS', cor: '#fde047' },
-  ];
-
-  ctx.font = 'bold 7px "Chakra Petch", monospace';
-  ctx.textAlign = 'center';
-  placasClean.forEach((pl) => {
-    const w = snap2(ctx.measureText(pl.txt).width + 12);
-    pxBox(ctx, pl.x - w / 2, pl.y - 8, w, 12, '#1e1b2e', PX_OUTLINE, 1.5);
-    pxRect(ctx, pl.x - w / 2 + 2, pl.y - 6, w - 4, 1.5, pl.cor);
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillText(pl.txt, pl.x, pl.y + 1);
-  });
-  ctx.textAlign = 'start';
+  const pulso = 0.8 + Math.sin(tick * 0.05) * 0.2;
+  [8, 24, 48, 64, 86].forEach((lx) => glow(t(lx), t(55.1), 80, `rgba(251,191,36,${0.3 * pulso})`));
+  glow(t(40), t(53), 130, `rgba(192,132,252,${0.38 * pulso})`); // LAN HOUSE
+  glow(t(73), t(16), 120, `rgba(232,121,249,${0.3 * pulso})`); // GAME ON VIP
+  glow(t(32), t(16), 110, `rgba(34,211,238,${0.22 * pulso})`); // GAMING ARENA
+  glow(t(74), t(34), 110, `rgba(250,204,21,${0.2 * pulso})`); // E-SPORTS
+  glow(t(32), t(46), 100, `rgba(56,189,248,${0.2 * pulso})`); // CAIXA PIX
+  glow(t(12), t(51), 70, `rgba(45,212,191,${0.2 * pulso})`); // LOUNGE
+  glow(t(12), t(16.5), 80, `rgba(244,114,182,${0.18 * pulso})`); // BOMBONIERE
+  glow(t(42), t(6), 100, `rgba(74,222,128,${0.14 * pulso})`); // NOC
   ctx.restore();
 }
