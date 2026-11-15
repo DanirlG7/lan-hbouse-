@@ -73,13 +73,10 @@ export const EmployeesModal: React.FC<Props> = ({
         {/* Header fiel à Imagem 1 */}
         <div className="pixel-modal-header">
           <div className="pixel-modal-title">
-            <span className="pixel-close-bracket" onClick={onClose}>
-              [ X ]
-            </span>
             <span>GESTÃO DE FUNCIONÁRIOS</span>
             <span className="badge-pixel badge-poo">RF11 • RF12 • Herança POO</span>
           </div>
-          <span style={{ color: '#94a3b8', cursor: 'pointer' }} onClick={onClose}>
+          <span style={{ color: '#94a3b8', fontSize: '1.1rem', cursor: 'pointer' }} onClick={onClose}>
             ✕
           </span>
         </div>
@@ -90,25 +87,25 @@ export const EmployeesModal: React.FC<Props> = ({
             className={`pixel-tab ${aba === 'GERAL' ? 'active' : ''}`}
             onClick={() => setAba('GERAL')}
           >
-            [{aba === 'GERAL' ? 'V' : ' '}] VISÃO GERAL
+            👥 Visão Geral
           </button>
           <button
             className={`pixel-tab ${aba === 'TURNOS' ? 'active' : ''}`}
             onClick={() => setAba('TURNOS')}
           >
-            [{aba === 'TURNOS' ? '*' : ' '}] ESCALA DE TURNOS
+            🕒 Escala de Turnos
           </button>
           <button
             className={`pixel-tab ${aba === 'DESEMPENHO' ? 'active' : ''}`}
             onClick={() => setAba('DESEMPENHO')}
           >
-            [{aba === 'DESEMPENHO' ? 'V' : ' '}] DESEMPENHO
+            📈 Desempenho
           </button>
           <button
             className={`pixel-tab ${aba === 'POO' ? 'active' : ''}`}
             onClick={() => setAba('POO')}
           >
-            [{aba === 'POO' ? 'V' : ' '}] HIERARQUIA & PERMISSÕES (POO)
+            🧩 Hierarquia & Permissões (POO)
           </button>
         </div>
 
@@ -168,6 +165,8 @@ export const EmployeesModal: React.FC<Props> = ({
                   <option value="RECEPCIONISTA">Atendente / Recepcionista</option>
                   <option value="SUPORTE_TECNICO">Suporte Técnico</option>
                   <option value="LIMPEZA">Limpeza</option>
+                  <option value="PORTEIRO_ESTACIONAMENTO">Porteiro do Estacionamento</option>
+                  <option value="GUARDA_PATIO">Guarda de Pátio</option>
                   <option value="DESENVOLVEDOR">Desenvolvedor</option>
                   <option value="ADMINISTRADOR">Administrador</option>
                 </select>
@@ -253,10 +252,10 @@ export const EmployeesModal: React.FC<Props> = ({
                       <td>
                         <button
                           className="pixel-btn"
-                          style={{ padding: '5px 10px', fontSize: '0.78rem' }}
+                          style={{ padding: '5px 12px', fontSize: '0.82rem' }}
                           onClick={() => setDetalheFunc(f)}
                         >
-                          [Detalhes]
+                          Detalhes
                         </button>
                       </td>
                     </tr>
@@ -338,10 +337,10 @@ export const EmployeesModal: React.FC<Props> = ({
                     <td>
                       <button
                         className="pixel-btn primary"
-                        style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                        style={{ padding: '5px 12px', fontSize: '0.8rem', fontWeight: 600 }}
                         onClick={() => onTrocarOperador(f.id)}
                       >
-                        [Assumir Operador]
+                        Assumir Operador
                       </button>
                     </td>
                   </tr>
@@ -356,18 +355,18 @@ export const EmployeesModal: React.FC<Props> = ({
                 const perfil = FABRICA_CARGOS[cKey];
                 return (
                   <div key={cKey} className="pixel-subcard" style={{ padding: 14 }}>
-                    <div style={{ fontSize: '0.72rem', color: '#c084fc', fontFamily: 'var(--font-pixel)' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#c084fc', fontWeight: 600 }}>
                       extends Funcionario
                     </div>
                     <h4 style={{ fontSize: '1rem', color: '#f8fafc', marginTop: 3 }}>
                       {perfil.nomeExibicao}
                     </h4>
-                    <div style={{ fontSize: '0.78rem', color: '#4ade80', margin: '4px 0 8px' }}>
+                    <div style={{ fontSize: '0.82rem', color: '#4ade80', margin: '4px 0 8px' }}>
                       Salário Base: {formatarMoeda(perfil.salarioBase)}
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                       {perfil.obterPermissoes().map((perm) => (
-                        <span key={perm} className="badge-pixel badge-ocupado" style={{ fontSize: '0.66rem' }}>
+                        <span key={perm} className="badge-pixel badge-ocupado" style={{ fontSize: '0.74rem' }}>
                           {perm}
                         </span>
                       ))}
@@ -403,15 +402,16 @@ export const EmployeesModal: React.FC<Props> = ({
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   className="pixel-btn primary"
+                  style={{ padding: '6px 14px', fontSize: '0.84rem', fontWeight: 600 }}
                   onClick={() => {
                     onTrocarOperador(detalheFunc.id);
                     setDetalheFunc(null);
                   }}
                 >
-                  [Logar como {detalheFunc.nome.split(' ')[0]}]
+                  Logar como {detalheFunc.nome.split(' ')[0]}
                 </button>
-                <button className="pixel-btn" onClick={() => setDetalheFunc(null)}>
-                  [Fechar]
+                <button className="pixel-btn" style={{ padding: '6px 14px', fontSize: '0.84rem' }} onClick={() => setDetalheFunc(null)}>
+                  Fechar
                 </button>
               </div>
             </div>
@@ -435,16 +435,18 @@ export const EmployeesModal: React.FC<Props> = ({
           <div style={{ display: 'flex', gap: 10 }}>
             <button
               className="pixel-btn primary"
+              style={{ padding: '7px 14px', fontSize: '0.84rem', fontWeight: 600 }}
               onClick={() => setMostrarFormContratar(!mostrarFormContratar)}
             >
-              [ Contratar Novo ]
+              + Contratar Funcionário
             </button>
             <button
               className="pixel-btn"
+              style={{ padding: '7px 14px', fontSize: '0.84rem' }}
               onClick={() => setAba('DESEMPENHO')}
               title={`Folha mensal total: ${formatarMoeda(folhaTotal)}`}
             >
-              [ Folha: {formatarMoeda(folhaTotal)} ]
+              Folha: {formatarMoeda(folhaTotal)}
             </button>
           </div>
         </div>

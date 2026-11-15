@@ -15,9 +15,9 @@
   --accent-amber: #fb923c;
   --accent-red: #f87171;
   --accent-purple: #c084fc;
-  --font-ui: 'Chakra Petch', sans-serif;
-  --font-pixel: 'Silkscreen', monospace;
-  --font-retro: 'VT323', monospace;
+  --font-ui: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-pixel: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-retro: 'Inter', monospace;
 }
 
 * {
@@ -25,6 +25,10 @@
   margin: 0;
   padding: 0;
   user-select: none;
+  font-family: var(--font-ui);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 input,
@@ -112,7 +116,7 @@ body,
   border-radius: 3px;
 }
 
-/* Cabeçalho de Modal [X] TÍTULO */
+/* CabeÃ§alho de Modal [X] TÃTULO */
 .pixel-modal-header {
   display: flex;
   align-items: center;
@@ -144,7 +148,7 @@ body,
   color: var(--accent-red);
 }
 
-/* Abas estilo [V] VISÃO GERAL */
+/* Abas estilo [V] VISÃƒO GERAL */
 .pixel-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -184,7 +188,7 @@ body,
     inset 0 0 8px rgba(56, 189, 248, 0.2);
 }
 
-/* Botões estilo [ Contratar Novo ] */
+/* BotÃµes estilo [ Contratar Novo ] */
 .pixel-btn {
   background: linear-gradient(180deg, #24375e 0%, #182542 100%);
   border: 1px solid #48669e;
@@ -270,7 +274,7 @@ body,
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
 }
 
-/* Tabela estilo Gestão de Funcionários / Conquistas */
+/* Tabela estilo GestÃ£o de FuncionÃ¡rios / Conquistas */
 .pixel-table {
   width: 100%;
   border-collapse: separate;
@@ -407,6 +411,308 @@ body,
   background: rgba(168, 85, 247, 0.22);
   border: 1px solid #c084fc;
   color: #e9d5ff;
-  font-family: var(--font-pixel);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* Conquistas: brilho em cards prontos e animação de resgate */
+@keyframes conquistaPulso {
+  0%, 100% { box-shadow: 0 0 0 rgba(74, 222, 128, 0); }
+  50% { box-shadow: 0 0 14px rgba(74, 222, 128, 0.45); }
+}
+@keyframes conquistaResgate {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.04); box-shadow: 0 0 26px rgba(250, 204, 21, 0.8); }
+  100% { transform: scale(1); }
+}
+.conquista-pronta { animation: conquistaPulso 1.8s ease-in-out infinite; }
+.conquista-resgatada { animation: conquistaResgate 0.8s ease-out; }
+
+/* ===== Dock inferior moderna (HD Glassmorphism) ===== */
+.hud-dock {
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: linear-gradient(180deg, rgba(14, 22, 42, 0.88) 0%, rgba(9, 14, 28, 0.94) 100%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(56, 189, 248, 0.32);
+  border-radius: 20px;
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.75),
+    0 0 28px rgba(56, 189, 248, 0.18),
+    inset 0 1px 1px rgba(255, 255, 255, 0.15);
+}
+.hud-dock-btn {
+  position: relative;
+  min-width: 86px;
+  padding: 8px 10px 7px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hud-dock-btn:hover {
+  transform: translateY(-4px);
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.16) 0%, rgba(14, 165, 233, 0.06) 100%);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #ffffff;
+  box-shadow: 0 8px 20px -4px rgba(56, 189, 248, 0.35);
+}
+.hud-dock-btn:hover .hud-dock-icon {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: rgba(56, 189, 248, 0.5);
+  transform: scale(1.08);
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6));
+}
+.hud-dock-btn.ativo {
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.32) 0%, rgba(3, 105, 161, 0.38) 100%);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.hud-dock-btn.ativo::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  width: 22px;
+  height: 3px;
+  border-radius: 2px;
+  background: #38bdf8;
+  box-shadow: 0 0 8px #38bdf8;
+}
+.hud-dock-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.18s ease;
+}
+.hud-dock-label {
+  font-size: 0.77rem;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  letter-spacing: 0.01em;
+  color: #e2e8f0;
+}
+.hud-dock-key {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.64rem;
+  font-weight: 700;
+  font-family: var(--font-ui);
+  color: #94a3b8;
+  background: #0b1222;
+  border: 1px solid #334155;
+  border-bottom: 2px solid #1e293b;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+.hud-dock-badge {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  min-width: 20px;
+  padding: 2px 7px;
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  font-family: var(--font-ui);
+  color: #04101e;
+  border-radius: 12px;
+  border: 2px solid #0b1122;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.02em;
+}
+.hud-dock-badge.pulsa {
+  animation: dockPulso 1.6s ease-in-out infinite;
+}
+@keyframes dockPulso {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+
+/* Card de Auditoria e Status no Canto Inferior Direito (HD Glass) */
+.hud-status-card {
+  position: fixed;
+  bottom: 14px;
+  right: 16px;
+  z-index: 25;
+  width: 236px;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, rgba(14, 22, 42, 0.88) 0%, rgba(9, 14, 28, 0.94) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 16px;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.6),
+    0 0 16px rgba(56, 189, 248, 0.12),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+}
+.hud-status-card:hover {
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.7),
+    0 0 24px rgba(56, 189, 248, 0.22);
+}
+
+/* ===== Painéis Laterais Superiores em HD Glassmorphism ===== */
+.hud-panel-hd {
+  background: linear-gradient(180deg, rgba(14, 22, 42, 0.90) 0%, rgba(9, 14, 28, 0.96) 100%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 18px;
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.7),
+    0 0 24px rgba(56, 189, 248, 0.12),
+    inset 0 1px 1px rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  font-family: var(--font-ui);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hud-avatar-frame {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 2px solid #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.4), inset 0 0 8px rgba(56, 189, 248, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #091224;
+  flex-shrink: 0;
+}
+
+.hud-level-pill {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, #0284c7, #38bdf8);
+  color: #ffffff;
   font-size: 0.65rem;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 10px;
+  border: 1.5px solid #0b1329;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+}
+
+.hud-staff-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.hud-staff-row:hover {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.35);
+  transform: translateX(3px);
+}
+
+.hud-staff-row.self {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.hud-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.hud-status-dot.online {
+  background: #4ade80;
+  box-shadow: 0 0 6px #4ade80;
+}
+
+.hud-status-dot.idle {
+  background: #facc15;
+  box-shadow: 0 0 6px #facc15;
+}
+
+/* Toolbar de Câmera Superior */
+.hud-camera-dock {
+  position: fixed;
+  top: 14px;
+  left: 278px;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  background: linear-gradient(180deg, rgba(14, 22, 42, 0.85) 0%, rgba(9, 14, 28, 0.92) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+
+.hud-camera-btn {
+  padding: 5px 11px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hud-camera-btn:hover {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.hud-camera-btn.active {
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.35) 0%, rgba(2, 132, 199, 0.45) 100%);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
 }

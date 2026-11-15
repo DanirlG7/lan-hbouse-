@@ -16,6 +16,7 @@ import { StatisticsReportModal } from './components/modals/StatisticsReportModal
 import { AchievementsModal } from './components/modals/AchievementsModal';
 import { SettingsModal } from './components/modals/SettingsModal';
 import { LoginOperatorModal } from './components/modals/LoginOperatorModal';
+import { ParkingAutomationModal } from './components/modals/ParkingAutomationModal';
 
 interface NotificacaoJogo {
   id: number;
@@ -29,8 +30,9 @@ export const App: React.FC = () => {
   const [modalAtivo, setModalAtivo] = useState<ModalAtivo>(null);
   const [pcFocado, setPcFocado] = useState<number | null>(null);
   const [sessaoCheckoutId, setSessaoCheckoutId] = useState<number | null>(null);
-  const [notificacao, setNotificacao] = useState<NotificacaoJogo | null>(null);
+  const [notificacoes, setNotificacoes] = useState<NotificacaoJogo[]>([]);
   const [javaOnline, setJavaOnline] = useState(false);
+  const [hudOculto, setHudOculto] = useState(false);
 
   const estado = lanHouseStore.getState();
   const operador = lanHouseStore.getOperadorLogado();
@@ -77,9 +79,10 @@ export const App: React.FC = () => {
   }, [estado.configuracoes.velocidadeSimulacao]);
 
   const dispararToast = (tipo: 'sucesso' | 'erro', titulo: string, mensagem: string) => {
-    setNotificacao({ id: Date.now(), tipo, titulo, mensagem });
+    const novoId = Date.now() + Math.random();
+    setNotificacoes((atuais) => [...atuais.slice(-3), { id: novoId, tipo, titulo, mensagem }]);
     setTimeout(() => {
-      setNotificacao((atual) => (atual && atual.mensagem === mensagem ? null : atual));
+      setNotificacoes((atuais) => atuais.filter((n) => n.id !== novoId));
     }, 5200);
   };
 
@@ -113,6 +116,12 @@ export const App: React.FC = () => {
         personagens={estado.personagens}
         melhorias={estado.melhorias}
         configuracoes={estado.configuracoes}
+        tarifaEstacionamento={estado.estacionamento.tarifaBase}
+        estacionamentoAtivo={estado.melhorias.find((m) => m.id === 'srv_estacionamento')?.ativo ?? true}
+        hudOculto={hudOculto}
+        onRegistrarTicketEstacionamento={(placa, vagaId, modelo) =>
+          lanHouseStore.registrarTicketEstacionamento(placa, vagaId, modelo)
+        }
         onSelectPc={(num) => {
           soundFX.playClick();
           setPcFocado(num);
@@ -125,6 +134,7 @@ export const App: React.FC = () => {
           else if (setor === 'CONSOLES') setModalAtivo('MELHORIAS');
           else if (setor === 'ESCRITORIO') setModalAtivo('ESTATISTICAS');
           else if (setor === 'MANUTENCAO') setModalAtivo('COMPUTADORES');
+          else if (setor === 'ESTACIONAMENTO') setModalAtivo('ESTACIONAMENTO');
         }}
       />
 
@@ -133,6 +143,11 @@ export const App: React.FC = () => {
         operador={operador}
         modalAtivo={modalAtivo}
         javaOnline={javaOnline}
+        hudOculto={hudOculto}
+        onToggleHud={() => {
+          soundFX.playClick();
+          setHudOculto((h) => !h);
+        }}
         onOpenModal={(m) => {
           soundFX.playClick();
           setSessaoCheckoutId(null);
@@ -153,44 +168,61 @@ export const App: React.FC = () => {
         }}
       />
 
-      {notificacao && (
+      {/* Fila de Notificações Toast em Pilha */}
+      {notificacoes.length > 0 && (
         <div
-          className="pixel-window"
           style={{
             position: 'fixed',
             top: 16,
             left: '50%',
             transform: 'translateX(-50%)',
-            zIndex: 80,
-            padding: '10px 18px',
-            minWidth: 340,
-            maxWidth: 580,
-            borderColor: notificacao.tipo === 'erro' ? '#f87171' : '#4ade80',
+            zIndex: 90,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 7,
+            alignItems: 'center',
+            pointerEvents: 'none',
           }}
         >
-          <div
-            style={{
-              fontWeight: 700,
-              fontSize: '0.84rem',
-              color: notificacao.tipo === 'erro' ? '#fca5a5' : '#86efac',
-              display: 'flex',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span>
-              {notificacao.tipo === 'erro' ? '⚠ ' : '✔ '}
-              {notificacao.titulo}
-            </span>
-            <span
-              style={{ cursor: 'pointer', marginLeft: 12 }}
-              onClick={() => setNotificacao(null)}
+          {notificacoes.map((n) => (
+            <div
+              key={n.id}
+              className="pixel-window"
+              style={{
+                padding: '8px 16px',
+                minWidth: 320,
+                maxWidth: 540,
+                borderColor: n.tipo === 'erro' ? '#f87171' : '#4ade80',
+                pointerEvents: 'auto',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.85)',
+              }}
             >
-              ✕
-            </span>
-          </div>
-          <div style={{ fontSize: '0.82rem', color: '#f8fafc', marginTop: 3 }}>
-            {notificacao.mensagem}
-          </div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: '0.84rem',
+                  color: n.tipo === 'erro' ? '#fca5a5' : '#86efac',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <span>
+                  {n.tipo === 'erro' ? '⚠ ' : '✔ '}
+                  {n.titulo}
+                </span>
+                <span
+                  style={{ cursor: 'pointer', marginLeft: 12, fontSize: '0.78rem', color: '#94a3b8' }}
+                  onClick={() => setNotificacoes((atuais) => atuais.filter((item) => item.id !== n.id))}
+                >
+                  ✕
+                </span>
+              </div>
+              <div style={{ fontSize: '0.8rem', color: '#f8fafc', marginTop: 2 }}>
+                {n.mensagem}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -366,12 +398,14 @@ export const App: React.FC = () => {
               true
             )
           }
+          computadoresCount={estado.computadores.length}
         />
       )}
 
       {modalAtivo === 'MELHORIAS' && (
         <UpgradesEstablishmentModal
           melhorias={estado.melhorias}
+          computadoresCount={estado.computadores.length}
           onClose={() => setModalAtivo(null)}
           onEvoluirOuAlternar={(id) =>
             executarComTratamentoPOO(
@@ -473,6 +507,28 @@ export const App: React.FC = () => {
               `Operando agora como ${lanHouseStore.getOperadorLogado().nome}`
             );
           }}
+        />
+      )}
+
+      {modalAtivo === 'ESTACIONAMENTO' && (
+        <ParkingAutomationModal
+          estacionamento={estado.estacionamento}
+          funcionarios={estado.funcionarios}
+          servicoPagoAtivo={estado.melhorias.find((m) => m.id === 'srv_estacionamento')?.ativo ?? true}
+          onAlterarTarifa={(v) =>
+            executarComTratamentoPOO(
+              () => lanHouseStore.alterarTarifaEstacionamento(v),
+              `Tarifa do estacionamento ajustada para R$ ${v.toFixed(2)}!`
+            )
+          }
+          onAlternarServicoPago={() =>
+            executarComTratamentoPOO(
+              () => lanHouseStore.evoluirMelhoriaEstabelecimento('srv_estacionamento'),
+              'Modo de cobrança do estacionamento atualizado!'
+            )
+          }
+          onAbrirStaff={() => setModalAtivo('FUNCIONARIOS')}
+          onClose={() => setModalAtivo(null)}
         />
       )}
     </div>

@@ -38,13 +38,10 @@ export const LoginOperatorModal: React.FC<Props> = ({
       >
         <div className="pixel-modal-header">
           <div className="pixel-modal-title">
-            <span className="pixel-close-bracket" onClick={onClose}>
-              [ X ]
-            </span>
             <span>AUTENTICAÇÃO & CONTROLE DE ACESSO</span>
             <span className="badge-pixel badge-poo">RF12 • RNF02 • RN10</span>
           </div>
-          <span style={{ color: '#94a3b8', cursor: 'pointer' }} onClick={onClose}>
+          <span style={{ color: '#94a3b8', fontSize: '1.1rem', cursor: 'pointer' }} onClick={onClose}>
             ✕
           </span>
         </div>
@@ -82,8 +79,8 @@ export const LoginOperatorModal: React.FC<Props> = ({
               Senha padrão da equipe inicial: <code>Lan@House2026</code>
             </div>
 
-            <button type="submit" className="pixel-btn primary" style={{ marginTop: 4 }}>
-              [ Autenticar Operador ]
+            <button type="submit" className="pixel-btn primary" style={{ marginTop: 4, padding: '9px 16px', fontSize: '0.88rem', fontWeight: 600 }}>
+              Autenticar Operador
             </button>
           </form>
 

@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Arquitetura de Frontend Híbrido: Pixel Art & Analytics HD</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm 16mm 18mm 16mm;
+      @bottom-right {
+        content: counter(page);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+      font-size: 10pt;
+      line-height: 1.55;
+      color: #1e293b;
+      background-color: #ffffff;
+    }
+
+    /* CAPA / CABEÇALHO FORMAL */
+    .header-box {
+      border-bottom: 2.5px solid #0284c7;
+      padding-bottom: 14px;
+      margin-bottom: 22px;
+    }
+
+    .badge-category {
+      display: inline-block;
+      font-size: 7.5pt;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: #e0f2fe;
+      color: #0369a1;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 18pt;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.25;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 10pt;
+      color: #64748b;
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      background: #f8fafc;
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      font-size: 8.5pt;
+    }
+
+    .meta-grid div strong {
+      color: #0f172a;
+      display: block;
+      font-size: 7.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* SEÇÕES */
+    h2 {
+      font-size: 13pt;
+      font-weight: 800;
+      color: #0f172a;
+      border-left: 4px solid #0284c7;
+      padding-left: 8px;
+      margin-top: 22px;
+      margin-bottom: 10px;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      font-size: 11pt;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 14px;
+      margin-bottom: 6px;
+      page-break-after: avoid;
+    }
+
+    p {
+      margin-bottom: 9px;
+      text-align: justify;
+    }
+
+    ul, ol {
+      margin-left: 20px;
+      margin-bottom: 10px;
+    }
+
+    li {
+      margin-bottom: 4px;
+    }
+
+    /* TABELAS TÉCNICAS */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 16px;
+      font-size: 8.5pt;
+      page-break-inside: avoid;
+    }
+
+    th {
+      background: #0f172a;
+      color: #ffffff;
+      font-weight: 700;
+      text-align: left;
+      padding: 7px 10px;
+      border: 1px solid #0f172a;
+    }
+
+    td {
+      padding: 7px 10px;
+      border: 1px solid #cbd5e1;
+      vertical-align: top;
+    }
+
+    tr:nth-child(even) {
+      background: #f8fafc;
+    }
+
+    /* CAIXAS DE DESTAQUE / CALLOUTS */
+    .callout {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-left: 4px solid #16a34a;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin: 12px 0;
+      font-size: 8.8pt;
+      page-break-inside: avoid;
+    }
+
+    .callout-warning {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-left: 4px solid #d97706;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin: 12px 0;
+      font-size: 8.8pt;
+      page-break-inside: avoid;
+    }
+
+    .callout-title {
+      font-weight: 800;
+      margin-bottom: 4px;
+      color: #0f172a;
+    }
+
+    /* BLOCOS DE CÓDIGO / DIAGRAMAS */
+    pre, code {
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 8pt;
+    }
+
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin: 10px 0 14px;
+      overflow-x: auto;
+      page-break-inside: avoid;
+    }
+
+    .code-inline {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 1px 4px;
+      border-radius: 3px;
+      border: 1px solid #e2e8f0;
+      font-weight: 600;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+
+    .diagram-box {
+      background: #f8fafc;
+      border: 1px dashed #94a3b8;
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+      margin: 12px 0;
+      font-family: monospace;
+      font-size: 8pt;
+      page-break-inside: avoid;
+    }
+
+    .footer-note {
+      margin-top: 30px;
+      border-top: 1px solid #cbd5e1;
+      padding-top: 10px;
+      font-size: 8pt;
+      color: #64748b;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CABEÇALHO ACADÊMICO -->
+  <div class="header-box">
+    <span class="badge-category">Relatório Técnico de Engenharia de Software & Design de Interfaces</span>
+    <h1>Arquitetura Híbrida de Frontend:<br>Simulação em Pixel Art & Analytics em Alta Definição (HD)</h1>
+    <div class="subtitle">
+      Fundamentos de Computação Gráfica, Modelos Históricos de Pixel Art (1-bit a 32-bit), Telemetria Executiva e POO Aplicada
+    </div>
+
+    <div class="meta-grid">
+      <div>
+        <strong>Projeto</strong>
+        Simulador Lan House & Cyber Café
+      </div>
+      <div>
+        <strong>Autor / Apresentação</strong>
+        Daniel (Administrador / Desenvolvedor)
+      </div>
+      <div>
+        <strong>Destinatário / Avaliação</strong>
+        Corpo Docente / Professor Orientador
+      </div>
+    </div>
+  </div>
+
+  <!-- 1. RESUMO EXECUTIVO -->
+  <h2>1. Resumo Executivo & O Dilema Arquitetural</h2>
+  <p>
+    No desenvolvimento de aplicações interativas de simulação e gestão empresarial (<em>tycoon/business simulators</em>),
+    um dos maiores desafios de Engenharia de Interface reside na tensão entre <strong>estética imersiva</strong> e 
+    <strong>usabilidade analítica</strong>.
+  </p>
+  <p>
+    Historicamente, projetos que forçam <em>toda a interface</em> em Pixel Art enfrentam graves falhas de usabilidade:
+    números decimais monetários tornam-se de difícil leitura em telas de alta densidade (Retina/4K), tabelas densas causam fadiga visual,
+    e componentes fiscais modernos (como QR Codes PIX) tornam-se inoperantes ou visualmente poluídos.
+  </p>
+
+  <div class="callout">
+    <div class="callout-title">✓ A Solução: Arquitetura Híbrida de Duas Camadas Desacopladas</div>
+    Adotou-se uma arquitetura que segrega as responsabilidades de exibição:
+    <strong>Camada 1 (Mundo/Simulação):</strong> Renderizada em HTML5 Canvas 2D com Pixel Art estrito (tiles e sprites ortogonais com <code>imageSmoothingEnabled = false</code>).<br>
+    <strong>Camada 2 (Gestão/Analytics/HUD):</strong> Renderizada no DOM do React em Alta Definição (HD/Vetorial), aplicando tipografia anti-serrilhada (<em>Inter</em>), cartões de telemetria no padrão <strong>Microsoft Power BI</strong> e checkout digital moderno inspirado em fintechs brasileiras.
+  </div>
+
+  <div class="diagram-box">
+    [ REQUISIÇÕES DO USUÁRIO & EVENTOS DO MOTOR ]<br>
+    │<br>
+    ├──► CAMADA 1: HTML5 CANVAS (2D Pixel Engine)<br>
+    │    └── Tiles 32x32 • Y-Sorting de Profundidade • Sprites sem Anti-Aliasing • Coordenadas de Grid<br>
+    │<br>
+    └──► CAMADA 2: DOM / REACT / SVG (HD Analytics Engine)<br>
+         └── KPI Tiles Power BI • Splines Bézier com Gradiente • Checkout PIX Dinâmico • Telemetria de Hardware
+  </div>
+
+  <!-- 2. MODELOS E GERAÇÕES DE PIXEL ART -->
+  <h2>2. Modelos, Gerações e Limitações de Hardware em Pixel Art</h2>
+  <p>
+    O Pixel Art não é meramente uma escolha visual retrô; trata-se de uma <strong>disciplina formal de computação gráfica</strong>
+    nascida sob as severas restrições de memória de vídeo (VRAM), registradores de paleta e taxas de varredura (*raster/scanlines*)
+    dos microprocessadores das décadas de 1970 a 1990. Compreender esses modelos é fundamental para projetar um frontend coerente:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Modelo / Geração</th>
+        <th>Resoluções Típicas</th>
+        <th>Profundidade de Cor & Paleta</th>
+        <th>Restrições de Hardware & Características</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1-Bit / 2-Bit</strong><br>(Monocromático & Game Boy DMG)</td>
+        <td>160×144 (Game Boy)<br>128×64 (Displays LCD)</td>
+        <td>1 a 2 bits por pixel.<br>2 a 4 tons (ex.: preto/branco ou os 4 verdes clássicos da tela DMG).</td>
+        <td>Ausência total de cores. Dependência crítica de <em>Bayer Dithering</em> (pontilhismo estruturado) e silhuetas bem demarcadas para comunicar volume e luz.</td>
+      </tr>
+      <tr>
+        <td><strong>8-Bit</strong><br>(NES / Master System / Famicom)</td>
+        <td>256×240 (NES)<br>256×192 (Master System)</td>
+        <td>Paleta global de 54 a 64 cores.<br>Subpaletas estritas de 3 cores + 1 transparente por sprite.</td>
+        <td>
+          Limite de 8 sprites por linha de varredura (provocando <em>sprite flickering</em>).
+          Tiles de 8×8 pixels agrupados em blocos de atributos de 16×16 que compartilham obrigatoriamente a mesma subpaleta.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>16-Bit</strong><br>(SNES / Mega Drive / Neo Geo)</td>
+        <td>256×224 (SNES)<br>320×224 (Mega Drive)<br>320×224 (Neo Geo MVS)</td>
+        <td>Espaço de 15 bits (32.768 cores).<br>Mega Drive: 64 cores simultâneas.<br>SNES: 256 cores na tela.<br>Neo Geo: 4.096 cores de 65.536.</td>
+        <td>
+          O ápice clássico. Suporte a planos múltiplos de rolagem paralaxe (<em>parallax</em>),
+          transformação afim de fundo (o famoso <em>Mode 7</em> do SNES para rotação/escala) e iluminação volumétrica com sombras ricas.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>32-Bit / 64-Bit 2D</strong><br>(PS1 / Saturn / GBA / DS)</td>
+        <td>240×160 (GBA)<br>320×240 até 640×480 (PS1/Saturn)</td>
+        <td>TrueColor 15-bit a 24-bit (16,7 milhões de cores).<br>Suporte a canal Alpha (RGBA).</td>
+        <td>
+          Fim da restrição de paletas fixas. Suporte nativo a transparência alfa aditiva/subtrativa,
+          sprites gigantescos com centenas de frames fluidos e rotação livre por hardware (ex.: <em>Castlevania SOTN, Metal Slug</em>).
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Pixel Art Moderno</strong><br>(Indie Contemporâneo / "Neo-Pixel")</td>
+        <td>Viewports Virtuais 16:9:<br>384×216, 480×270 ou 640×360</td>
+        <td>RGBA 32-bit completo.<br>Paletas autorais (DawnBringer 32, Endesga 64).</td>
+        <td>
+          Projetado para <em>Integer Scaling</em> (escala inteira 3x, 4x, 5x) em telas Full HD/4K sem deformação.
+          Combina pixel art manual com iluminação dinâmica contemporânea, shaders de pós-processamento e sistemas de partículas.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="page-break"></div>
+
+  <!-- 3. CONCEITOS E REGRAS TÉCNICAS DE PIXEL ART -->
+  <h2>3. Princípios Fundamentais de Computação Gráfica em Pixel Art</h2>
+  <p>
+    Para garantir a autenticidade e o conforto visual da simulação da Lan House, o motor de canvas respeita rigorosamente
+    as regras canônicas da arte em pixel:
+  </p>
+
+  <h3>A. O Erro Crítico dos "Mixels" (Mistura de Resoluções)</h3>
+  <p>
+    Um <strong>Mixel</strong> (<em>Mixed Resolution Pixel</em>) ocorre quando o desenvolvedor rotaciona, escala ou renderiza
+    sprites de resoluções virtuais distintas no mesmo plano. Isso destrói a ilusão retrô e gera ruído óptico.
+  </p>
+  <div class="callout-warning">
+    <div class="callout-title">⚠ Regra Anti-Mixel Aplicada ao Projeto</div>
+    Todos os elementos do mundo compartilham o mesmo grid de proporção (tiles de 32×32 pixels).
+    Qualquer ampliação de câmera é executada via escala inteira uniforme no canvas, garantindo que 1 "pixel de arte" equivalha
+    exatamente ao mesmo número de pixels físicos da tela em todos os objetos.
+  </div>
+
+  <h3>B. Dithering (Tramagem Tonal)</h3>
+  <p>
+    Técnica que simula gradientes e novas cores posicionando pixels em padrões intercalados (xadrez ou difusão de erro).
+    Utilizado nas sombras dos pisos e paredes de tijolo da lan house para criar textura sem aumentar a saturação da paleta.
+  </p>
+
+  <h3>C. Hand Anti-Aliasing (Suavização Manual)</h3>
+  <p>
+    Diferente do anti-aliasing automático das placas de vídeo (que borra os contornos), o AA manual no pixel art é feito
+    pelo posicionamento cirúrgico de pixels em tons intermediários nas quebras diagonais, enganando a retina humana para perceber curvas orgânicas.
+  </p>
+
+  <h3>D. Perspectiva Adotada: Top-Down 3/4 (Ortogonal)</h3>
+  <p>
+    A simulação adota a clássica perspectiva <strong>Top-Down 3/4</strong> (popularizada por clássicos como <em>Pokémon</em> e <em>Zelda</em>).
+    Ela combina visão superior do piso para cálculo cartesiano simples de rotas $(X, Y)$ com a visualização frontal/perfil das estações de computador,
+    permitindo ao jogador visualizar claramente se a tela do PC está ligada, livre, ou com usuário logado.
+  </p>
+
+  <!-- 4. ENGENHARIA DA CAMADA ANALÍTICA (POWER BI / FINTECH) -->
+  <h2>4. Engenharia da Camada de Gestão HD (Analytics & Fintech)</h2>
+  <p>
+    Para as janelas operacionais, optou-se por construir uma experiência de <strong>Enterprise Dashboard</strong>.
+    O operador da Lan House deixa de ser apenas um jogador casual e assume o papel de gestor operacional com telemetria profissional:
+  </p>
+
+  <h3>A. Padrão Microsoft Power BI nos Gráficos (SVG)</h3>
+  <ul>
+    <li>
+      <strong>Área Spline Fluida:</strong> Em vez de gráficos serrilhados de baixa resolução, o gráfico de <em>Movimento de Clientes</em>
+      calcula uma curva contínua utilizando <strong>Splines Cúbicas de Catmull-Rom</strong>:
+      <pre><code>// Interpolação Bézier contínua calculada dinamicamente:
+const cp1x = p1.x + (p2.x - p0.x) * 0.2;
+const cp1y = p1.y + (p2.y - p0.y) * 0.2;
+linePath += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;</code></pre>
+      A área abaixo da curva recebe um preenchimento em gradiente ciano translúcido com ponto focal no dia de maior pico.
+    </li>
+    <li>
+      <strong>Power BI Donut Visual:</strong> O gráfico de horários de pico utiliza cálculo de circunferência trigonométrica
+      (<code>stroke-dasharray</code>), com anéis coloridos representando turnos e um <em>cutout central</em> destacando o horário de pico absoluto (<code>19h • PICO</code>).
+    </li>
+    <li>
+      <strong>Colunas com Meta de Referência:</strong> As barras verticais de faturamento contam com trilhas de capacidade de fundo
+      (<em>track slots</em>) e uma linha tracejada horizontal de meta semanal (<code>Meta: R$ 1.2k</code>).
+    </li>
+    <li>
+      <strong>KPI Cards com Micro-Sparklines:</strong> Cartões executivos de Faturamento, Lucro Líquido e Ocupação exibem bordas superiores coloridas de 3px
+      e mini-gráficos vetoriais de evolução embutidos no canto inferior direito.
+    </li>
+  </ul>
+
+  <h3>B. Checkout Digital & Fluxo PIX (Padrão Fintech)</h3>
+  <ul>
+    <li>
+      <strong>QR Code Vetorial Nítido:</strong> O componente de pagamento gera um QR Code em SVG de alta resolução,
+      com marcadores de posicionamento geométricos e o emblema oficial do <strong>Banco Central / PIX</strong>.
+    </li>
+    <li>
+      <strong>Cálculo Polimórfico de Desconto (RN09):</strong> Aplicação automática da regra de negócio que concede 5% de desconto para liquidação via PIX,
+      discriminada de forma transparente na fatura.
+    </li>
+    <li>
+      <strong>Integração com Clipboard & Troco:</strong> Cópia instantânea da chave copia-e-cola com feedback visual e calculadora de troco com botões de cédula rápida (R$ 20, R$ 50, R$ 100).
+    </li>
+  </ul>
+
+  <div class="page-break"></div>
+
+  <!-- 5. POO APLICADA AO FRONTEND -->
+  <h2>5. Integração com Programação Orientada a Objetos (POO)</h2>
+  <p>
+    O frontend foi construído em estrita consonância com os requisitos funcionais e regras de negócio da disciplina de POO:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Conceito de POO</th>
+        <th>Regra de Negócio / Requisito</th>
+        <th>Implementação Concreta no Frontend</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Polimorfismo</strong></td>
+        <td><strong>RN09:</strong> Desconto de 5% no PIX; cálculo de acréscimo no Crédito.</td>
+        <td>O checkout consome o mapa <code>PROCESSADORES_PAGAMENTO[forma]</code> onde cada classe concreta encapsula sua fórmula de cálculo sem estruturas de decisão encadeadas (<code>switch/if</code>).</td>
+      </tr>
+      <tr>
+        <td><strong>Máquina de Estados Finita</strong></td>
+        <td><strong>RN01–RN05:</strong> Ciclo de vida dos computadores (LIVRE, OCUPADO, MANUTENÇÃO).</td>
+        <td>O diagrama de rede superior e o grid da LAN alteram cor de LED, gradiente de tela e ações contextuais (Iniciar Sessão vs Encerrar vs Liberar Cooler) com base no estado atômico.</td>
+      </tr>
+      <tr>
+        <td><strong>Encapsulamento</strong></td>
+        <td><strong>RF05 / RF06:</strong> Abertura e encerramento seguro de sessões.</td>
+        <td>A interface gráfica não muta variáveis de sessão diretamente; ela dispara comandos formais para o <code>LanHouseEngine</code>, que valida disponibilidade e congela a tarifa horária da máquina.</td>
+      </tr>
+      <tr>
+        <td><strong>Auditoria e Log</strong></td>
+        <td><strong>RF10 / RN10:</strong> Rastreabilidade contábil e de infraestrutura.</td>
+        <td>Aba dedicada de auditoria que consome o log imutável de eventos com operador, timestamp ISO e identificador da regra POO violada ou executada.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- 6. PROMPT GUIA / TEMPLATE DE ESPECIFICAÇÃO -->
+  <h2>6. Template de Instrução / Prompt Técnico Reutilizável</h2>
+  <p>
+    Para fins de reprodutibilidade por outros estudantes, pesquisadores ou assistentes de IA,
+    o seguinte roteiro consolida as diretrizes para construir uma aplicação web nessa mesma arquitetura:
+  </p>
+
+  <div class="callout">
+    <div class="callout-title">📋 Especificação / Prompt de Reprodução de Frontend Híbrido</div>
+    <em>"Desenvolva uma aplicação web para simulação de negócios utilizando a <strong>Arquitetura Híbrida de Frontend</strong>. A área de simulação do mundo deve ser renderizada através de HTML5 <code>&lt;canvas&gt;</code> em <strong>Pixel Art autêntico</strong>, com tiles e sprites de resolução fixa (32×32), sem anti-aliasing (<code>imageSmoothingEnabled = false</code>) e com ordenação vertical de profundidade (Y-sorting). Em contrapartida, toda a interface do usuário (HUD de operadores, modais de telemetria, estoque e caixa) deve ser construída no DOM do React em <strong>Alta Definição (HD Vetorial)</strong>, utilizando design system escuro com glassmorphism, tipografia 'Inter', painéis analíticos no estilo <strong>Microsoft Power BI</strong> (cards com accent lines e micro-sparklines, curvas spline Bézier fluidas com gradiente, donut chart com métrica de pico central) e checkout fintech com QR Code PIX nítido e cálculo polimórfico de descontos. Mantenha o motor de simulação de domínio (POO) estritamente desacoplado do ciclo de renderização visual."</em>
+  </div>
+
+  <!-- CONCLUSÃO -->
+  <h2>7. Considerações Finais</h2>
+  <p>
+    A adoção da Arquitetura Híbrida demonstra que a estética retrô do Pixel Art e o rigor analítico dos dashboards modernos
+    não são mutuamente exclusivos. Ao delimitar claramente o papel de cada tecnologia — o Canvas para a simulação espacial expressiva
+    e o SVG/DOM para a gestão orientada a dados — entrega-se um produto de software robusto, visualmente atraente e plenamente acessível.
+  </p>
+
+  <div class="footer-note">
+    Documentação técnica elaborada para o projeto Lan House & Cyber Café • Desenvolvido com React, TypeScript, HTML5 Canvas & SVG.
+  </div>
+
+</body>
+</html>

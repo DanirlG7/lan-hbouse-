@@ -1,3 +1,6 @@
+import { ANCORAS_LOJAS, SOLIDOS_DECOR } from './decor';
+import { SOLIDOS_MOBILIARIO } from './mobiliario';
+
 /**
  * LAYOUT DO MAPA EM DADOS (unidades em TILES de 32px; aceita metades, ex. 21.5)
  *
@@ -65,7 +68,7 @@ export const SALAS: Sala[] = [
   { id: 'wc_func', tipo: 'BANHEIRO_FUNC', nome: 'WC EQUIPE', x: 76, y: 4, w: 8, h: 8, piso: 'AZULEJO', cor: '#a5b4fc' },
   { id: 'servico', tipo: 'SERVICO', nome: 'CORREDOR DE SERVIÇO', x: 4, y: 12, w: 80, h: 3, piso: 'CONCRETO', cor: '#94a3b8' },
   { id: 'bomboniere', tipo: 'BOMBONIERE', nome: 'BOMBONIERE', x: 4, y: 15, w: 16, h: 16, piso: 'AZULEJO', cor: '#f472b6' },
-  { id: 'lounge', tipo: 'LOUNGE', nome: 'LOUNGE', x: 4, y: 31, w: 16, h: 21, piso: 'MADEIRA', cor: '#2dd4bf' },
+  { id: 'lounge', tipo: 'LOUNGE', nome: 'GALERIA GAMER', x: 4, y: 31, w: 16, h: 21, piso: 'MADEIRA', cor: '#2dd4bf' },
   { id: 'salao', tipo: 'SALAO', nome: 'SALÃO GAMER', x: 20, y: 15, w: 40, h: 30, piso: 'CARPETE', cor: '#22d3ee' },
   { id: 'corredor', tipo: 'CORREDOR', nome: 'CORREDOR LESTE', x: 60, y: 15, w: 3, h: 37, piso: 'CONCRETO', cor: '#94a3b8' },
   { id: 'vip', tipo: 'VIP', nome: 'GAME ON VIP', x: 63, y: 15, w: 21, h: 18, piso: 'CARPETE', cor: '#c084fc' },
@@ -95,6 +98,7 @@ export const PORTAS: Porta[] = [
   { id: 'porta_vip', orientacao: 'V', x: 63, y: 21, largura: 2, etiqueta: 'VIP' },
   { id: 'porta_sala_vip', orientacao: 'H', x: 73.5, y: 33, largura: 2 },
   { id: 'porta_arena_esports', orientacao: 'V', x: 63, y: 41, largura: 2, etiqueta: 'ARENA' },
+  { id: 'porta_estacionamento', orientacao: 'H', x: 91.0, y: 52, largura: 5.5, etiqueta: 'ESTACIONAMENTO' },
 ];
 
 /** Trechos de parede em vidro acústico (slim) — x1,y1 → x2,y2 em tiles */
@@ -211,6 +215,9 @@ export const ANCORAS: Ancora[] = [
   A('salao_leste_1', 57.5, 21),
   A('salao_leste_2', 57.5, 28),
   A('salao_leste_3', 57.5, 35),
+  A('espera_salao_oeste', 45.5, 34.4, 'Sala de Espera PCs'),
+  A('espera_salao_meio', 49.5, 31.5),
+  A('espera_salao_leste', 53.5, 34.4, 'Área de Descanso'),
   A('deck_aisle_35a', 45.5, 35),
   A('deck_aisle_35b', 49.5, 35),
   A('porta_salao_leste', 60, 28),
@@ -242,7 +249,9 @@ export const ANCORAS: Ancora[] = [
   A('porta_arena_esports', 63, 41),
   A('arena_hall', 66, 41),
   A('sala_vip_sofa', 66, 46),
-  A('arena_esports_palco', 80, 41, 'Arena E-Sports'),
+  A('arena_sofa_leste', 73.5, 46),
+  A('arena_ringside_sul', 79.2, 46),
+  A('arena_esports_palco', 74.4, 41, 'Arena de Lutas'),
   // --- serviço
   A('servico_estudio', 12, 13.5),
   A('servico_adm', 28, 13.5),
@@ -280,14 +289,19 @@ export const ANCORAS: Ancora[] = [
   A('banheiro_func', 80, 9.5),
   // --- bomboniere
   A('porta_cozinha', 12, 15),
-  A('cozinha_hall', 12, 17.5),
-  A('cozinha_geladeira', 7, 17.5),
-  A('cozinha_balcao', 16.5, 17.5),
-  A('cozinha_mesa_1', 7, 21),
+  A('cozinha_hall', 12, 18),
+  A('cozinha_geladeira', 8.2, 18),
+  A('cozinha_balcao', 14.8, 18),
+  A('cozinha_mesa_1', 8.2, 21),
   A('cozinha_corredor', 12, 21),
-  A('cozinha_mesa_2', 16.5, 21),
+  A('cozinha_mesa_2', 15.8, 21),
   A('porta_bomboniere', 20, 21),
-  A('cozinha_mesa_3', 12, 26),
+  A('cozinha_entre_esq', 8.2, 25.3),
+  A('cozinha_mesa_3', 12, 25.3),
+  A('cozinha_entre_dir', 15.8, 25.3),
+  A('cozinha_sul_esq', 8.2, 29.4),
+  A('cozinha_sul_centro', 12, 29.4),
+  A('cozinha_sul_dir', 15.8, 29.4),
   A('porta_bomb_lounge', 12, 31),
   // --- lounge
   A('lounge_hall', 12, 33),
@@ -303,5 +317,14 @@ export const SOLIDOS_FIXOS: Array<{ x: number; y: number; w: number; h: number }
   { x: 22, y: 47, w: 15, h: 1.4 }, // balcão da recepção
   { x: 9.5, y: 5.6, w: 5, h: 1.1 }, // mesa do streamer
   { x: 26, y: 5.2, w: 5, h: 1.5 }, // mesa executiva ADM
-  { x: 84, y: 4, w: 10, h: 48 }, // zona de expansão
+  { x: 13.8, y: 16.3, w: 5.0, h: 0.9 }, // balcão da lanchonete (bomboniere)
+  { x: 75.2, y: 36.6, w: 8.0, h: 8.8 }, // ringue de lutas (arena)
+  { x: 67.6, y: 42.2, w: 5.0, h: 2.8 }, // tatame de treino e sacos de pancada (arena)
+  { x: 84, y: 4, w: 10, h: 12 }, // cantinho VIP
+  { x: 84.3, y: 46.6, w: 3.9, h: 4.1 }, // guarita do estacionamento
 ];
+
+// Lojas do mini centro comercial: nós de grafo na frente de cada balcão e colisão dos blocos
+ANCORAS.push(...ANCORAS_LOJAS);
+SOLIDOS_FIXOS.push(...SOLIDOS_DECOR);
+SOLIDOS_FIXOS.push(...SOLIDOS_MOBILIARIO);

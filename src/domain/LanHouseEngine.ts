@@ -5,6 +5,7 @@ import {
   Computador,
   ConfiguracoesJogo,
   Conquista,
+  EstadoEstacionamento,
   FormaPagamento,
   Funcionario,
   HumorFuncionario,
@@ -16,11 +17,16 @@ import {
   Permissao,
   PersonagemMapa,
   Produto,
+  RegistroTicketEstacionamento,
   RelatorioFinanceiro,
   Sessao,
   SetorMapa,
   Turno,
 } from './types';
+import { SLOTS_PC } from '../world/layout';
+
+/** Capacidade física exata desenhada no mapa (18 Comuns/Deck + 6 VIP = 24 estações). */
+export const MAX_ESTACOES_MAPA = SLOTS_PC.length;
 
 // ============================================================================
 // PILARES DA POO APLICADOS NO MOTOR DO DOMÍNIO
@@ -115,12 +121,32 @@ export class CargoDesenvolvedor extends PerfilCargoPOO {
   }
 }
 
+export class CargoPorteiroEstacionamento extends PerfilCargoPOO {
+  readonly cargo: CargoFuncionario = 'PORTEIRO_ESTACIONAMENTO';
+  readonly nomeExibicao = 'Porteiro do Estac.';
+  readonly salarioBase = 2050;
+  obterPermissoes(): Permissao[] {
+    return ['OPERAR_SESSAO', 'REGISTRAR_PAGAMENTO', 'CONSULTAR_HISTORICO'];
+  }
+}
+
+export class CargoGuardaPatio extends PerfilCargoPOO {
+  readonly cargo: CargoFuncionario = 'GUARDA_PATIO';
+  readonly nomeExibicao = 'Guarda de Pátio';
+  readonly salarioBase = 2200;
+  obterPermissoes(): Permissao[] {
+    return ['MANUTENCAO_COMPUTADOR', 'CONSULTAR_HISTORICO'];
+  }
+}
+
 export const FABRICA_CARGOS: Record<CargoFuncionario, PerfilCargoPOO> = {
   ADMINISTRADOR: new CargoAdministrador(),
   RECEPCIONISTA: new CargoRecepcionista(),
   SUPORTE_TECNICO: new CargoSuporteTecnico(),
   LIMPEZA: new CargoLimpeza(),
   DESENVOLVEDOR: new CargoDesenvolvedor(),
+  PORTEIRO_ESTACIONAMENTO: new CargoPorteiroEstacionamento(),
+  GUARDA_PATIO: new CargoGuardaPatio(),
 };
 
 /**
@@ -205,6 +231,7 @@ export interface EstadoCompletoLanHouse {
   conquistasResgatadas: string[];
   historicoHorario: LinhaHoraria[];
   configuracoes: ConfiguracoesJogo;
+  estacionamento: EstadoEstacionamento;
 }
 
 const STORAGE_KEY = 'lanhouse_poo_pixel_save_v3';
@@ -270,6 +297,8 @@ export function coordenadasDoSetor(setor: SetorMapa, indice = 0): { x: number; y
       return { x: 1035 + (indice % 2) * 38, y: 545 };
     case 'AREA_COMUM':
       return { x: 520 + (indice % 3) * 55, y: 400 };
+    case 'ESTACIONAMENTO':
+      return { x: 87.2 * 32, y: (48.6 - (indice % 2) * 6) * 32 };
     case 'RUA':
     default:
       return { x: 580 + ((indice * 95) % 240), y: 665 + (indice % 2) * 22 };
@@ -392,6 +421,34 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
       avatarSeed: 8,
       permissoes: FABRICA_CARGOS.DESENVOLVEDOR.obterPermissoes(),
     },
+    {
+      id: 9,
+      nome: 'Roberto Porteiro',
+      login: 'roberto.portaria',
+      senhaHash: senhaPadraoHash,
+      cargo: 'PORTEIRO_ESTACIONAMENTO',
+      turno: 'MANHA',
+      humor: 'FELIZ',
+      trabalhandoAgora: true,
+      salario: 2050,
+      atendimentosRealizados: 24,
+      avatarSeed: 9,
+      permissoes: FABRICA_CARGOS.PORTEIRO_ESTACIONAMENTO.obterPermissoes(),
+    },
+    {
+      id: 10,
+      nome: 'Cabo Henrique',
+      login: 'henrique.patio',
+      senhaHash: senhaPadraoHash,
+      cargo: 'GUARDA_PATIO',
+      turno: 'TARDE',
+      humor: 'FELIZ',
+      trabalhandoAgora: true,
+      salario: 2200,
+      atendimentosRealizados: 19,
+      avatarSeed: 10,
+      permissoes: FABRICA_CARGOS.GUARDA_PATIO.obterPermissoes(),
+    },
   ];
 
   const clientes: Cliente[] = [
@@ -406,33 +463,75 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
     { id: 9, nome: 'Gustavo Mendes', telefone: '(11) 98119-3302', identificador: '618.402.119-05', criadoEm: '2026-04-21T08:00:00', fidelidadePontos: 120, avatarSeed: 19 },
     { id: 10, nome: 'Amanda Ribeiro', telefone: '(11) 99772-5510', identificador: '309.882.441-77', criadoEm: '2026-04-21T08:02:00', fidelidadePontos: 260, avatarSeed: 20 },
     { id: 11, nome: 'Felipe Santana', telefone: '(11) 98554-1029', identificador: '445.990.312-60', criadoEm: '2026-04-21T08:05:00', fidelidadePontos: 95, avatarSeed: 21 },
+    { id: 12, nome: 'Rafael Oliveira', telefone: '(11) 99241-1804', identificador: '371.428.905-11', criadoEm: '2026-04-21T08:10:00', fidelidadePontos: 155, avatarSeed: 22 },
+    { id: 13, nome: 'Isabela Costa', telefone: '(11) 98613-7740', identificador: '519.204.338-27', criadoEm: '2026-04-21T08:15:00', fidelidadePontos: 210, avatarSeed: 23 },
+    { id: 14, nome: 'Vinícius Araujo', telefone: '(11) 99180-6623', identificador: '604.778.120-93', criadoEm: '2026-04-21T08:20:00', fidelidadePontos: 130, avatarSeed: 24 },
+    { id: 15, nome: 'Mariana Tavares', telefone: '(11) 98377-4920', identificador: '288.519.740-08', criadoEm: '2026-04-21T08:25:00', fidelidadePontos: 185, avatarSeed: 25 },
+    { id: 16, nome: 'Caio Henrique', telefone: '(11) 99502-8145', identificador: '490.312.665-54', criadoEm: '2026-04-21T08:30:00', fidelidadePontos: 240, avatarSeed: 26 },
+    { id: 17, nome: 'Letícia Barbosa', telefone: '(11) 98891-3319', identificador: '335.640.812-71', criadoEm: '2026-04-21T08:35:00', fidelidadePontos: 165, avatarSeed: 27 },
+    { id: 18, nome: 'Igor Nogueira', telefone: '(11) 99467-2055', identificador: '572.901.448-39', criadoEm: '2026-04-21T08:40:00', fidelidadePontos: 290, avatarSeed: 28 },
+    { id: 19, nome: 'Bianca Azevedo', telefone: '(11) 98144-9072', identificador: '403.719.225-62', criadoEm: '2026-04-21T08:45:00', fidelidadePontos: 115, avatarSeed: 29 },
+    { id: 20, nome: 'Henrique Pires', telefone: '(11) 99708-5130', identificador: '629.184.507-84', criadoEm: '2026-04-21T08:50:00', fidelidadePontos: 205, avatarSeed: 30 },
+    { id: 21, nome: 'Natália Gomes', telefone: '(11) 98490-6218', identificador: '362.805.914-15', criadoEm: '2026-04-21T08:55:00', fidelidadePontos: 90, avatarSeed: 31 },
+    { id: 22, nome: 'Eduardo Farias', telefone: '(11) 99611-4807', identificador: '481.290.633-46', criadoEm: '2026-04-21T09:00:00', fidelidadePontos: 145, avatarSeed: 32 },
+    { id: 23, nome: 'Otávio Rocha', telefone: '(11) 99210-4418', identificador: '509.418.220-70', criadoEm: '2026-04-21T09:05:00', fidelidadePontos: 170, avatarSeed: 33 },
+    { id: 24, nome: 'Sabrina Lima', telefone: '(11) 98732-1940', identificador: '614.205.778-31', criadoEm: '2026-04-21T09:10:00', fidelidadePontos: 215, avatarSeed: 34 },
+    { id: 25, nome: 'Murilo Costa', telefone: '(11) 99388-5501', identificador: '390.617.842-99', criadoEm: '2026-04-21T09:15:00', fidelidadePontos: 125, avatarSeed: 35 },
+    { id: 26, nome: 'Evelyn Dias', telefone: '(11) 98109-7734', identificador: '471.930.125-68', criadoEm: '2026-04-21T09:20:00', fidelidadePontos: 160, avatarSeed: 36 },
+    { id: 27, nome: 'Luana Martins', telefone: '(11) 98711-2045', identificador: '312.459.881-04', criadoEm: '2026-04-21T09:25:00', fidelidadePontos: 195, avatarSeed: 37 },
+    { id: 28, nome: 'Lucas Silveira', telefone: '(11) 99342-8871', identificador: '489.102.347-19', criadoEm: '2026-04-21T09:30:00', fidelidadePontos: 140, avatarSeed: 38 },
+    { id: 29, nome: 'Thiago Ribeiro', telefone: '(11) 98219-4509', identificador: '521.803.964-55', criadoEm: '2026-04-21T09:35:00', fidelidadePontos: 220, avatarSeed: 39 },
+    { id: 30, nome: 'Paula Mendes', telefone: '(11) 99650-1123', identificador: '367.914.502-83', criadoEm: '2026-04-21T09:40:00', fidelidadePontos: 175, avatarSeed: 40 },
+    { id: 31, nome: 'Bruno Castro', telefone: '(11) 98904-7732', identificador: '440.671.298-61', criadoEm: '2026-04-21T09:45:00', fidelidadePontos: 130, avatarSeed: 41 },
+    { id: 32, nome: 'Gabriela Souza', telefone: '(11) 99175-3380', identificador: '583.210.479-72', criadoEm: '2026-04-21T09:50:00', fidelidadePontos: 260, avatarSeed: 42 },
+    { id: 33, nome: 'Rodrigo Lima', telefone: '(11) 98433-6617', identificador: '418.590.312-90', criadoEm: '2026-04-21T09:55:00', fidelidadePontos: 110, avatarSeed: 43 },
+    { id: 34, nome: 'Yasmin Duarte', telefone: '(11) 99781-9940', identificador: '602.748.193-44', criadoEm: '2026-04-21T10:00:00', fidelidadePontos: 205, avatarSeed: 44 },
+    { id: 35, nome: 'Marcelo Vieira', telefone: '(11) 98320-5561', identificador: '375.829.401-26', criadoEm: '2026-04-21T10:05:00', fidelidadePontos: 150, avatarSeed: 45 },
+    { id: 36, nome: 'Clara Nogueira', telefone: '(11) 99564-2208', identificador: '496.137.850-38', criadoEm: '2026-04-21T10:10:00', fidelidadePontos: 185, avatarSeed: 46 },
   ];
 
   const computadores: Computador[] = [
     // Fileira 1 da Arena Principal (PC-01 a PC-04)
     { numero: 1, identificacao: 'PC-01', area: 'COMUM', categoria: 'PC Básico', especificacoes: 'i5 12400F • 16GB • GTX 1660', precoPorHora: 8.0, status: 'OCUPADO', sessaoAtivaId: 103, usuarioAtualNome: 'Gabriel Rocha', manutencaoMotivo: null, totalMinutosUso: 420 },
-    { numero: 2, identificacao: 'PC-02', area: 'COMUM', categoria: 'PC Básico', especificacoes: 'i5 12400F • 16GB • GTX 1660', precoPorHora: 8.0, status: 'LIVRE', sessaoAtivaId: null, usuarioAtualNome: null, manutencaoMotivo: null, totalMinutosUso: 310 },
+    { numero: 2, identificacao: 'PC-02', area: 'COMUM', categoria: 'PC Básico', especificacoes: 'i5 12400F • 16GB • GTX 1660', precoPorHora: 8.0, status: 'OCUPADO', sessaoAtivaId: 112, usuarioAtualNome: 'Rafael Oliveira', manutencaoMotivo: null, totalMinutosUso: 345 },
     { numero: 3, identificacao: 'PC-03', area: 'COMUM', categoria: 'PC Intermediário', especificacoes: 'Ryzen 5 5600X • 16GB • RTX 3060', precoPorHora: 10.0, status: 'MANUTENCAO', sessaoAtivaId: null, usuarioAtualNome: null, manutencaoMotivo: 'Troca de pasta térmica / limpeza', totalMinutosUso: 515 },
     { numero: 4, identificacao: 'PC-04', area: 'COMUM', categoria: 'PC Intermediário', especificacoes: 'Ryzen 5 5600X • 16GB • RTX 3060', precoPorHora: 10.0, status: 'OCUPADO', sessaoAtivaId: 104, usuarioAtualNome: 'Matheus Cardoso', manutencaoMotivo: null, totalMinutosUso: 390 },
     // Fileira 2 da Arena Principal (PC-05 a PC-08)
-    { numero: 5, identificacao: 'PC-05', area: 'COMUM', categoria: 'PC Gaming', especificacoes: 'i7 13700K • 32GB • RTX 4060 Ti', precoPorHora: 12.0, status: 'LIVRE', sessaoAtivaId: null, usuarioAtualNome: null, manutencaoMotivo: null, totalMinutosUso: 640 },
+    { numero: 5, identificacao: 'PC-05', area: 'COMUM', categoria: 'PC Gaming', especificacoes: 'i7 13700K • 32GB • RTX 4060 Ti', precoPorHora: 12.0, status: 'OCUPADO', sessaoAtivaId: 121, usuarioAtualNome: 'Natália Gomes', manutencaoMotivo: null, totalMinutosUso: 640 },
     { numero: 6, identificacao: 'PC-06', area: 'COMUM', categoria: 'PC Gaming', especificacoes: 'i7 13700K • 32GB • RTX 4060 Ti', precoPorHora: 12.0, status: 'OCUPADO', sessaoAtivaId: 105, usuarioAtualNome: 'Camila Souza', manutencaoMotivo: null, totalMinutosUso: 480 },
-    { numero: 7, identificacao: 'PC-07', area: 'COMUM', categoria: 'PC Intermediário', especificacoes: 'Ryzen 5 5600X • 16GB • RTX 3060', precoPorHora: 10.0, status: 'LIVRE', sessaoAtivaId: null, usuarioAtualNome: null, manutencaoMotivo: null, totalMinutosUso: 275 },
+    { numero: 7, identificacao: 'PC-07', area: 'COMUM', categoria: 'PC Intermediário', especificacoes: 'Ryzen 5 5600X • 16GB • RTX 3060', precoPorHora: 10.0, status: 'OCUPADO', sessaoAtivaId: 113, usuarioAtualNome: 'Isabela Costa', manutencaoMotivo: null, totalMinutosUso: 305 },
     { numero: 8, identificacao: 'PC-08', area: 'COMUM', categoria: 'PC Gaming', especificacoes: 'i7 13700K • 32GB • RTX 4060 Ti', precoPorHora: 12.0, status: 'OCUPADO', sessaoAtivaId: 108, usuarioAtualNome: 'Beatriz Duarte', manutencaoMotivo: null, totalMinutosUso: 410 },
     // Fileira 3 da Arena Principal (PC-09 a PC-12)
-    { numero: 9, identificacao: 'PC-09', area: 'COMUM', categoria: 'PC Gaming', especificacoes: 'Ryzen 7 5700X • 32GB • RTX 4060', precoPorHora: 12.0, status: 'LIVRE', sessaoAtivaId: null, usuarioAtualNome: null, manutencaoMotivo: null, totalMinutosUso: 330 },
+    { numero: 9, identificacao: 'PC-09', area: 'COMUM', categoria: 'PC Gaming', especificacoes: 'Ryzen 7 5700X • 32GB • RTX 4060', precoPorHora: 12.0, status: 'OCUPADO', sessaoAtivaId: 122, usuarioAtualNome: 'Eduardo Farias', manutencaoMotivo: null, totalMinutosUso: 350 },
     { numero: 10, identificacao: 'PC-10', area: 'COMUM', categoria: 'PC Gaming', especificacoes: 'Ryzen 7 5700X • 32GB • RTX 4060', precoPorHora: 12.0, status: 'OCUPADO', sessaoAtivaId: 109, usuarioAtualNome: 'Gustavo Mendes', manutencaoMotivo: null, totalMinutosUso: 505 },
     { numero: 11, identificacao: 'PC-11', area: 'COMUM', categoria: 'PC Intermediário', especificacoes: 'Ryzen 5 5600X • 16GB • RTX 3060', precoPorHora: 10.0, status: 'OCUPADO', sessaoAtivaId: 110, usuarioAtualNome: 'Felipe Santana', manutencaoMotivo: null, totalMinutosUso: 290 },
-    { numero: 12, identificacao: 'PC-12', area: 'COMUM', categoria: 'PC Básico', especificacoes: 'i5 12400F • 16GB • GTX 1660', precoPorHora: 8.0, status: 'LIVRE', sessaoAtivaId: null, usuarioAtualNome: null, manutencaoMotivo: null, totalMinutosUso: 245 },
+    { numero: 12, identificacao: 'PC-12', area: 'COMUM', categoria: 'PC Básico', especificacoes: 'i5 12400F • 16GB • GTX 1660', precoPorHora: 8.0, status: 'OCUPADO', sessaoAtivaId: 114, usuarioAtualNome: 'Vinícius Araujo', manutencaoMotivo: null, totalMinutosUso: 280 },
     // Arena VIP Pro-Gaming Championship (VIP-13 a VIP-18)
     { numero: 13, identificacao: 'VIP-13', area: 'VIP', categoria: 'VIP Station', especificacoes: 'Ryzen 7 7800X3D • 32GB • RTX 4080 • 240Hz', precoPorHora: 18.0, status: 'OCUPADO', sessaoAtivaId: 106, usuarioAtualNome: 'Juliana Alves', manutencaoMotivo: null, totalMinutosUso: 590 },
-    { numero: 14, identificacao: 'VIP-14', area: 'VIP', categoria: 'VIP Station', especificacoes: 'Ryzen 7 7800X3D • 32GB • RTX 4080 • 240Hz', precoPorHora: 18.0, status: 'LIVRE', sessaoAtivaId: null, usuarioAtualNome: null, manutencaoMotivo: null, totalMinutosUso: 465 },
-    { numero: 15, identificacao: 'VIP-15', area: 'VIP', categoria: 'VIP Station', especificacoes: 'i9 14900K • 64GB • RTX 4090 • 360Hz', precoPorHora: 22.0, status: 'LIVRE', sessaoAtivaId: null, usuarioAtualNome: null, manutencaoMotivo: null, totalMinutosUso: 380 },
+    { numero: 14, identificacao: 'VIP-14', area: 'VIP', categoria: 'VIP Station', especificacoes: 'Ryzen 7 7800X3D • 32GB • RTX 4080 • 240Hz', precoPorHora: 18.0, status: 'OCUPADO', sessaoAtivaId: 115, usuarioAtualNome: 'Mariana Tavares', manutencaoMotivo: null, totalMinutosUso: 495 },
+    { numero: 15, identificacao: 'VIP-15', area: 'VIP', categoria: 'VIP Station', especificacoes: 'i9 14900K • 64GB • RTX 4090 • 360Hz', precoPorHora: 22.0, status: 'OCUPADO', sessaoAtivaId: 123, usuarioAtualNome: 'Otávio Rocha', manutencaoMotivo: null, totalMinutosUso: 410 },
     { numero: 16, identificacao: 'VIP-16', area: 'VIP', categoria: 'VIP Station', especificacoes: 'i9 14900K • 64GB • RTX 4090 • 360Hz', precoPorHora: 22.0, status: 'OCUPADO', sessaoAtivaId: 107, usuarioAtualNome: 'Larissa Ferreira', manutencaoMotivo: null, totalMinutosUso: 530 },
     { numero: 17, identificacao: 'VIP-17', area: 'VIP', categoria: 'VIP Station', especificacoes: 'i9 14900K • 64GB • RTX 4090 • 360Hz', precoPorHora: 22.0, status: 'OCUPADO', sessaoAtivaId: 111, usuarioAtualNome: 'Amanda Ribeiro', manutencaoMotivo: null, totalMinutosUso: 615 },
-    { numero: 18, identificacao: 'VIP-18', area: 'VIP', categoria: 'VIP Station', especificacoes: 'Ryzen 7 7800X3D • 32GB • RTX 4080 • 240Hz', precoPorHora: 18.0, status: 'LIVRE', sessaoAtivaId: null, usuarioAtualNome: null, manutencaoMotivo: null, totalMinutosUso: 350 },
+    { numero: 18, identificacao: 'VIP-18', area: 'VIP', categoria: 'VIP Station', especificacoes: 'Ryzen 7 7800X3D • 32GB • RTX 4080 • 240Hz', precoPorHora: 18.0, status: 'OCUPADO', sessaoAtivaId: 116, usuarioAtualNome: 'Caio Henrique', manutencaoMotivo: null, totalMinutosUso: 390 },
   ];
-  computadores.push(...criarPcsDeck());
+  const pcsDeck = criarPcsDeck();
+  const ocupadosDeck: Record<number, { sessaoId: number; nome: string; mins: number }> = {
+    19: { sessaoId: 117, nome: 'Letícia Barbosa', mins: 260 },
+    20: { sessaoId: 118, nome: 'Igor Nogueira', mins: 310 },
+    21: { sessaoId: 124, nome: 'Sabrina Lima', mins: 240 },
+    22: { sessaoId: 119, nome: 'Bianca Azevedo', mins: 215 },
+    24: { sessaoId: 120, nome: 'Henrique Pires', mins: 180 },
+  };
+  pcsDeck.forEach((pc) => {
+    const info = ocupadosDeck[pc.numero];
+    if (info) {
+      pc.status = 'OCUPADO';
+      pc.sessaoAtivaId = info.sessaoId;
+      pc.usuarioAtualNome = info.nome;
+      pc.totalMinutosUso = info.mins;
+    }
+  });
+  computadores.push(...pcsDeck);
 
   const produtos: Produto[] = [
     { id: 1, nome: 'Soda Neon Lata', categoria: 'BEBIDA', preco: 6.5, estoque: 42, vendidos: 128, icone: 'soda' },
@@ -444,7 +543,7 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
     { id: 7, nome: 'Mousepad Speed XL', categoria: 'PERIFERICO', preco: 35.0, estoque: 15, vendidos: 23, icone: 'mouse' },
   ];
 
-  // Sessões históricas encerradas + sessões ativas no momento (08:12)
+  // Sessões históricas encerradas + sessões ativas no momento (15:30)
   const sessoes: Sessao[] = [
     {
       id: 101,
@@ -453,8 +552,8 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
       computadorNumero: 5,
       areaComputador: 'COMUM',
       tarifaPorHoraCongelada: 12.0,
-      inicio: '2026-04-21T06:30:00',
-      fim: '2026-04-21T07:45:00',
+      inicio: '2026-04-21T13:45:00',
+      fim: '2026-04-21T15:00:00',
       minutosUtilizados: 75,
       valorTempo: 15.0,
       itensConsumo: [{ produtoId: 1, nomeProduto: 'Soda Neon Lata', quantidade: 2, precoUnitario: 6.5, subtotal: 13.0 }],
@@ -472,8 +571,8 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
       computadorNumero: 10,
       areaComputador: 'VIP',
       tarifaPorHoraCongelada: 18.0,
-      inicio: '2026-04-21T06:50:00',
-      fim: '2026-04-21T07:50:00',
+      inicio: '2026-04-21T14:10:00',
+      fim: '2026-04-21T15:10:00',
       minutosUtilizados: 60,
       valorTempo: 18.0,
       itensConsumo: [{ produtoId: 2, nomeProduto: 'Fatia Pizza Calabresa', quantidade: 1, precoUnitario: 12.0, subtotal: 12.0 }],
@@ -491,7 +590,7 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
       computadorNumero: 1,
       areaComputador: 'COMUM',
       tarifaPorHoraCongelada: 8.0,
-      inicio: '2026-04-21T07:20:00',
+      inicio: '2026-04-21T14:38:00',
       fim: null,
       minutosUtilizados: 52,
       valorTempo: 6.93,
@@ -510,7 +609,7 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
       computadorNumero: 4,
       areaComputador: 'COMUM',
       tarifaPorHoraCongelada: 10.0,
-      inicio: '2026-04-21T07:35:00',
+      inicio: '2026-04-21T14:53:00',
       fim: null,
       minutosUtilizados: 37,
       valorTempo: 6.17,
@@ -529,7 +628,7 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
       computadorNumero: 6,
       areaComputador: 'COMUM',
       tarifaPorHoraCongelada: 12.0,
-      inicio: '2026-04-21T07:42:00',
+      inicio: '2026-04-21T15:00:00',
       fim: null,
       minutosUtilizados: 30,
       valorTempo: 6.0,
@@ -548,7 +647,7 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
       computadorNumero: 13,
       areaComputador: 'VIP',
       tarifaPorHoraCongelada: 18.0,
-      inicio: '2026-04-21T07:12:00',
+      inicio: '2026-04-21T14:30:00',
       fim: null,
       minutosUtilizados: 60,
       valorTempo: 18.0,
@@ -567,7 +666,7 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
       computadorNumero: 16,
       areaComputador: 'VIP',
       tarifaPorHoraCongelada: 22.0,
-      inicio: '2026-04-21T07:52:00',
+      inicio: '2026-04-21T15:10:00',
       fim: null,
       minutosUtilizados: 20,
       valorTempo: 7.33,
@@ -586,7 +685,7 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
       computadorNumero: 8,
       areaComputador: 'COMUM',
       tarifaPorHoraCongelada: 12.0,
-      inicio: '2026-04-21T07:40:00',
+      inicio: '2026-04-21T14:58:00',
       fim: null,
       minutosUtilizados: 32,
       valorTempo: 6.4,
@@ -605,7 +704,7 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
       computadorNumero: 10,
       areaComputador: 'COMUM',
       tarifaPorHoraCongelada: 12.0,
-      inicio: '2026-04-21T07:30:00',
+      inicio: '2026-04-21T14:48:00',
       fim: null,
       minutosUtilizados: 42,
       valorTempo: 8.4,
@@ -624,7 +723,7 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
       computadorNumero: 11,
       areaComputador: 'COMUM',
       tarifaPorHoraCongelada: 10.0,
-      inicio: '2026-04-21T07:48:00',
+      inicio: '2026-04-21T15:06:00',
       fim: null,
       minutosUtilizados: 24,
       valorTempo: 4.0,
@@ -643,7 +742,7 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
       computadorNumero: 17,
       areaComputador: 'VIP',
       tarifaPorHoraCongelada: 22.0,
-      inicio: '2026-04-21T07:25:00',
+      inicio: '2026-04-21T14:43:00',
       fim: null,
       minutosUtilizados: 47,
       valorTempo: 17.23,
@@ -652,6 +751,253 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
       valorTotal: 17.23,
       status: 'ATIVA',
       operadorAbertura: 'Daniel (Admin)',
+      operadorEncerramento: null,
+      estoqueDevolvido: false,
+    },
+    {
+      id: 112,
+      clienteId: 12,
+      clienteNome: 'Rafael Oliveira',
+      computadorNumero: 2,
+      areaComputador: 'COMUM',
+      tarifaPorHoraCongelada: 8.0,
+      inicio: '2026-04-21T15:02:00',
+      fim: null,
+      minutosUtilizados: 28,
+      valorTempo: 3.73,
+      itensConsumo: [],
+      valorConsumo: 0,
+      valorTotal: 3.73,
+      status: 'ATIVA',
+      operadorAbertura: 'Ana Silva',
+      operadorEncerramento: null,
+      estoqueDevolvido: false,
+    },
+    {
+      id: 113,
+      clienteId: 13,
+      clienteNome: 'Isabela Costa',
+      computadorNumero: 7,
+      areaComputador: 'COMUM',
+      tarifaPorHoraCongelada: 10.0,
+      inicio: '2026-04-21T14:55:00',
+      fim: null,
+      minutosUtilizados: 35,
+      valorTempo: 5.83,
+      itensConsumo: [{ produtoId: 1, nomeProduto: 'Soda Neon Lata', quantidade: 1, precoUnitario: 6.5, subtotal: 6.5 }],
+      valorConsumo: 6.5,
+      valorTotal: 12.33,
+      status: 'ATIVA',
+      operadorAbertura: 'Mariana Lima',
+      operadorEncerramento: null,
+      estoqueDevolvido: false,
+    },
+    {
+      id: 114,
+      clienteId: 14,
+      clienteNome: 'Vinícius Araujo',
+      computadorNumero: 12,
+      areaComputador: 'COMUM',
+      tarifaPorHoraCongelada: 8.0,
+      inicio: '2026-04-21T15:12:00',
+      fim: null,
+      minutosUtilizados: 18,
+      valorTempo: 2.4,
+      itensConsumo: [],
+      valorConsumo: 0,
+      valorTotal: 2.4,
+      status: 'ATIVA',
+      operadorAbertura: 'Ana Silva',
+      operadorEncerramento: null,
+      estoqueDevolvido: false,
+    },
+    {
+      id: 115,
+      clienteId: 15,
+      clienteNome: 'Mariana Tavares',
+      computadorNumero: 14,
+      areaComputador: 'VIP',
+      tarifaPorHoraCongelada: 18.0,
+      inicio: '2026-04-21T14:48:00',
+      fim: null,
+      minutosUtilizados: 42,
+      valorTempo: 12.6,
+      itensConsumo: [{ produtoId: 3, nomeProduto: 'Energético Turbo 473ml', quantidade: 1, precoUnitario: 14.0, subtotal: 14.0 }],
+      valorConsumo: 14.0,
+      valorTotal: 26.6,
+      status: 'ATIVA',
+      operadorAbertura: 'Daniel (Admin)',
+      operadorEncerramento: null,
+      estoqueDevolvido: false,
+    },
+    {
+      id: 116,
+      clienteId: 16,
+      clienteNome: 'Caio Henrique',
+      computadorNumero: 18,
+      areaComputador: 'VIP',
+      tarifaPorHoraCongelada: 18.0,
+      inicio: '2026-04-21T15:05:00',
+      fim: null,
+      minutosUtilizados: 25,
+      valorTempo: 7.5,
+      itensConsumo: [],
+      valorConsumo: 0,
+      valorTotal: 7.5,
+      status: 'ATIVA',
+      operadorAbertura: 'Daniel (Admin)',
+      operadorEncerramento: null,
+      estoqueDevolvido: false,
+    },
+    {
+      id: 117,
+      clienteId: 17,
+      clienteNome: 'Letícia Barbosa',
+      computadorNumero: 19,
+      areaComputador: 'COMUM',
+      tarifaPorHoraCongelada: 12.0,
+      inicio: '2026-04-21T14:52:00',
+      fim: null,
+      minutosUtilizados: 38,
+      valorTempo: 7.6,
+      itensConsumo: [],
+      valorConsumo: 0,
+      valorTotal: 7.6,
+      status: 'ATIVA',
+      operadorAbertura: 'Ana Silva',
+      operadorEncerramento: null,
+      estoqueDevolvido: false,
+    },
+    {
+      id: 118,
+      clienteId: 18,
+      clienteNome: 'Igor Nogueira',
+      computadorNumero: 20,
+      areaComputador: 'COMUM',
+      tarifaPorHoraCongelada: 12.0,
+      inicio: '2026-04-21T14:40:00',
+      fim: null,
+      minutosUtilizados: 50,
+      valorTempo: 10.0,
+      itensConsumo: [{ produtoId: 5, nomeProduto: 'Café Expresso Gamer', quantidade: 1, precoUnitario: 5.0, subtotal: 5.0 }],
+      valorConsumo: 5.0,
+      valorTotal: 15.0,
+      status: 'ATIVA',
+      operadorAbertura: 'Mariana Lima',
+      operadorEncerramento: null,
+      estoqueDevolvido: false,
+    },
+    {
+      id: 119,
+      clienteId: 19,
+      clienteNome: 'Bianca Azevedo',
+      computadorNumero: 22,
+      areaComputador: 'COMUM',
+      tarifaPorHoraCongelada: 10.0,
+      inicio: '2026-04-21T15:14:00',
+      fim: null,
+      minutosUtilizados: 16,
+      valorTempo: 2.67,
+      itensConsumo: [],
+      valorConsumo: 0,
+      valorTotal: 2.67,
+      status: 'ATIVA',
+      operadorAbertura: 'Ana Silva',
+      operadorEncerramento: null,
+      estoqueDevolvido: false,
+    },
+    {
+      id: 120,
+      clienteId: 20,
+      clienteNome: 'Henrique Pires',
+      computadorNumero: 24,
+      areaComputador: 'COMUM',
+      tarifaPorHoraCongelada: 8.0,
+      inicio: '2026-04-21T15:08:00',
+      fim: null,
+      minutosUtilizados: 22,
+      valorTempo: 2.93,
+      itensConsumo: [],
+      valorConsumo: 0,
+      valorTotal: 2.93,
+      status: 'ATIVA',
+      operadorAbertura: 'Mariana Lima',
+      operadorEncerramento: null,
+      estoqueDevolvido: false,
+    },
+    {
+      id: 121,
+      clienteId: 21,
+      clienteNome: 'Natália Gomes',
+      computadorNumero: 5,
+      areaComputador: 'COMUM',
+      tarifaPorHoraCongelada: 12.0,
+      inicio: '2026-04-21T15:00:00',
+      fim: null,
+      minutosUtilizados: 30,
+      valorTempo: 6.0,
+      itensConsumo: [],
+      valorConsumo: 0,
+      valorTotal: 6.0,
+      status: 'ATIVA',
+      operadorAbertura: 'Ana Silva',
+      operadorEncerramento: null,
+      estoqueDevolvido: false,
+    },
+    {
+      id: 122,
+      clienteId: 22,
+      clienteNome: 'Eduardo Farias',
+      computadorNumero: 9,
+      areaComputador: 'COMUM',
+      tarifaPorHoraCongelada: 12.0,
+      inicio: '2026-04-21T15:10:00',
+      fim: null,
+      minutosUtilizados: 20,
+      valorTempo: 4.0,
+      itensConsumo: [],
+      valorConsumo: 0,
+      valorTotal: 4.0,
+      status: 'ATIVA',
+      operadorAbertura: 'Ana Silva',
+      operadorEncerramento: null,
+      estoqueDevolvido: false,
+    },
+    {
+      id: 123,
+      clienteId: 23,
+      clienteNome: 'Otávio Rocha',
+      computadorNumero: 15,
+      areaComputador: 'VIP',
+      tarifaPorHoraCongelada: 22.0,
+      inicio: '2026-04-21T14:55:00',
+      fim: null,
+      minutosUtilizados: 35,
+      valorTempo: 12.83,
+      itensConsumo: [{ produtoId: 1, nomeProduto: 'Soda Neon Lata', quantidade: 1, precoUnitario: 6.5, subtotal: 6.5 }],
+      valorConsumo: 6.5,
+      valorTotal: 19.33,
+      status: 'ATIVA',
+      operadorAbertura: 'Daniel (Admin)',
+      operadorEncerramento: null,
+      estoqueDevolvido: false,
+    },
+    {
+      id: 124,
+      clienteId: 24,
+      clienteNome: 'Sabrina Lima',
+      computadorNumero: 21,
+      areaComputador: 'COMUM',
+      tarifaPorHoraCongelada: 10.0,
+      inicio: '2026-04-21T15:04:00',
+      fim: null,
+      minutosUtilizados: 26,
+      valorTempo: 4.33,
+      itensConsumo: [],
+      valorConsumo: 0,
+      valorTotal: 4.33,
+      status: 'ATIVA',
+      operadorAbertura: 'Mariana Lima',
       operadorEncerramento: null,
       estoqueDevolvido: false,
     },
@@ -668,7 +1014,7 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
       valorFinal: 26.6,
       forma: 'PIX',
       status: 'CONFIRMADO',
-      dataHora: '2026-04-21T07:46:00',
+      dataHora: '2026-04-21T15:01:00',
       operadorRegistro: 'Fernanda Oliveira',
       operadorConfirmacao: 'Fernanda Oliveira',
     },
@@ -682,7 +1028,7 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
       valorFinal: 30.0,
       forma: 'CREDITO',
       status: 'PENDENTE', // Pronto para demonstrar confirmação na aula!
-      dataHora: '2026-04-21T07:51:00',
+      dataHora: '2026-04-21T15:11:00',
       operadorRegistro: 'Mariana Lima',
       operadorConfirmacao: null,
     },
@@ -709,20 +1055,21 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
     { id: 'inf_eletrica', nome: 'Quadro Elétrico Trifásico', grupo: 'INFRAESTRUTURA', nivel: 2, nivelMax: 5, custoProximo: 1800, ativo: true, icone: 'electrical', beneficio: '-15% na conta de energia e proteção contra quedas' },
     { id: 'inf_seguranca', nome: 'Sistema de Segurança CFTV', grupo: 'INFRAESTRUTURA', nivel: 1, nivelMax: 4, custoProximo: 1400, ativo: true, icone: 'cctv', beneficio: '+4% Reputação e monitoramento 24h das salas' },
     { id: 'inf_ar', nome: 'Ar-Condicionado Climatizado', grupo: 'INFRAESTRUTURA', nivel: 2, nivelMax: 5, custoProximo: 2100, ativo: true, icone: 'ac', beneficio: 'Mantém PCs frios (98% saúde) e clientes felizes' },
-    { id: 'eq_pcs', nome: 'Bancadas Gamer RGB', grupo: 'EQUIPAMENTOS', nivel: 3, nivelMax: 5, custoProximo: 2600, ativo: true, icone: 'pc', beneficio: 'Aumenta conforto nas sessões longas' },
+    { id: 'eq_pcs', nome: 'Bancadas Gamer RGB (24 Estações)', grupo: 'EQUIPAMENTOS', nivel: 3, nivelMax: 5, custoProximo: 2600, ativo: true, icone: 'pc', beneficio: 'Evolui conforto e placa nas 24 estações do mapa (PC-01..24)' },
     { id: 'eq_print', nome: 'Central de Impressão Laser', grupo: 'EQUIPAMENTOS', nivel: 1, nivelMax: 3, custoProximo: 950, ativo: true, icone: 'printer', beneficio: 'Gera receita extra de impressões e xerox' },
     { id: 'eq_console', nome: 'Lounge de Consoles Next-Gen', grupo: 'EQUIPAMENTOS', nivel: 2, nivelMax: 4, custoProximo: 3200, ativo: true, icone: 'console', beneficio: 'Atrai grupos de amigos na sala inferior direita' },
-    { id: 'eq_monitor', nome: 'Monitores 240Hz / 360Hz', grupo: 'EQUIPAMENTOS', nivel: 2, nivelMax: 5, custoProximo: 2400, ativo: true, icone: 'monitor', beneficio: 'Valoriza as estações VIP (+reputação)' },
+    { id: 'eq_monitor', nome: 'Monitores 240Hz / 360Hz (6 VIPs)', grupo: 'EQUIPAMENTOS', nivel: 2, nivelMax: 5, custoProximo: 2400, ativo: true, icone: 'monitor', beneficio: 'Valoriza as 6 estações VIP do mapa (+reputação)' },
     { id: 'srv_bar', nome: 'Bar / Lanchonete Express', grupo: 'SERVICOS', nivel: 1, nivelMax: 1, custoProximo: 0, ativo: true, icone: 'pc', beneficio: 'Entrega de sodas e pizzas direto na mesa do cliente' },
     { id: 'srv_suporte', nome: 'Suporte Técnico Premium', grupo: 'SERVICOS', nivel: 1, nivelMax: 1, custoProximo: 0, ativo: true, icone: 'pc', beneficio: 'Reduz tempo de manutenção preventiva dos PCs' },
     { id: 'srv_24h', nome: 'Modo Funcionamento 24h', grupo: 'SERVICOS', nivel: 1, nivelMax: 1, custoProximo: 0, ativo: true, icone: 'pc', beneficio: 'Mantém a LAN House operando nos 3 turnos' },
     { id: 'srv_eventos', nome: 'Corujão & Torneios eSports', grupo: 'SERVICOS', nivel: 1, nivelMax: 1, custoProximo: 0, ativo: true, icone: 'pc', beneficio: 'Aumenta fluxo de clientes nos fins de semana' },
+    { id: 'srv_estacionamento', nome: 'Estacionamento Pago & Cancelas', grupo: 'SERVICOS', nivel: 1, nivelMax: 1, custoProximo: 0, ativo: true, icone: 'parking', beneficio: '8 vagas com leitura automática, guarita e cancelas de fluxo' },
   ];
 
   const estadoBase: EstadoCompletoLanHouse = {
-    relogioIso: '2026-04-21T08:12:00',
-    caixaSaldo: 38500.0,
-    reputacao: 94,
+    relogioIso: '2026-04-21T15:30:00',
+    caixaSaldo: 6850.0,
+    reputacao: 96,
     nivelGerente: 12,
     xpAtual: 1380,
     xpProximoNivel: 2000,
@@ -750,6 +1097,16 @@ export function criarDadosIniciais(): EstadoCompletoLanHouse {
       mostrarGradePixel: false,
       modo24Horas: true,
       urlBackendJava: 'http://localhost:8080',
+    },
+    estacionamento: {
+      tarifaBase: 10.0,
+      vagasTotais: 8,
+      totalVeiculosAtendidos: 14,
+      receitaEstacionamento: 140.0,
+      ultimosTickets: [
+        { id: 'TK-1014', placa: 'LAN-8G42', vagaId: 'V02', modeloCarro: 'Hatch', valor: 10.0, horario: '15:18' },
+        { id: 'TK-1013', placa: 'PIX-4090', vagaId: 'V05', modeloCarro: 'Sedan', valor: 10.0, horario: '14:52' },
+      ],
     },
   };
 
@@ -791,6 +1148,12 @@ export function sincronizarPersonagensMapa(estado: EstadoCompletoLanHouse): Pers
       } else if (f.cargo === 'RECEPCIONISTA') {
         setor = idx === 0 ? 'RECEPCAO' : 'BOMBONIERE';
         acao = idx === 0 ? 'Check-in de clientes' : 'Servindo lanches';
+      } else if (f.cargo === 'PORTEIRO_ESTACIONAMENTO') {
+        setor = 'ESTACIONAMENTO';
+        acao = 'Controlando cancela e guarita';
+      } else if (f.cargo === 'GUARDA_PATIO') {
+        setor = 'ESTACIONAMENTO';
+        acao = 'Patrulhando vagas (V01–V08)';
       }
 
       const alvo = pcNum ? coordenadasDoPc(pcNum) : coordenadasDoSetor(setor, idx);
@@ -808,7 +1171,12 @@ export function sincronizarPersonagensMapa(estado: EstadoCompletoLanHouse): Pers
         acao,
         computadorNumero: pcNum,
         avatarSeed: f.avatarSeed,
-        corRoupa: f.cargo === 'ADMINISTRADOR' ? '#f59e0b' : '#2563eb',
+        corRoupa:
+          f.cargo === 'ADMINISTRADOR'
+            ? '#f59e0b'
+            : f.cargo === 'PORTEIRO_ESTACIONAMENTO' || f.cargo === 'GUARDA_PATIO'
+              ? '#0f172a'
+              : '#2563eb',
         corCabelo: CORES_CABELO[f.avatarSeed % CORES_CABELO.length],
       });
     });
@@ -876,17 +1244,302 @@ export function sincronizarPersonagensMapa(estado: EstadoCompletoLanHouse): Pers
 /**
  * Cálculo oficial de valor por tempo (RF07 / RN04):
  * Minuto iniciado conta inteiro, mínimo de 1 minuto cobrado, igual a Sessao.java!
+ * Incorpora teto operacional realista de 360 min (6 horas / corujão) para evitar glitches de tempo infinito.
  */
 export function calcularTempoEValorSessao(
   inicioIso: string,
   fimOuAgoraIso: string,
   tarifaPorHora: number
 ): { minutos: number; valorTempo: number } {
-  const diffMs = Math.max(0, new Date(fimOuAgoraIso).getTime() - new Date(inicioIso).getTime());
+  const tInicio = new Date(inicioIso).getTime();
+  const tFim = new Date(fimOuAgoraIso).getTime();
+  const diffMs = Math.max(0, isNaN(tFim - tInicio) ? 60000 : tFim - tInicio);
   const minutosBrutos = Math.ceil(diffMs / 60000);
-  const minutos = Math.max(1, minutosBrutos);
+  // Limite operacional da LAN House: sessões contínuas têm teto realista de 360 min (6 horas / limite corujão)
+  const minutos = Math.min(360, Math.max(1, minutosBrutos));
   const valorTempo = Number(((minutos / 60) * tarifaPorHora).toFixed(2));
   return { minutos, valorTempo };
+}
+
+/**
+ * Sanitiza e calibra estados e saves persistidos para garantir números e métricas 100% realistas:
+ * - Duração de computadores entre 25 e 110 min (nunca milhões de minutos)
+ * - Saldo de caixa entre R$ 4.500 e R$ 12.000 (nunca milhões)
+ * - Gastos por usuário compatíveis com a realidade (R$ 8 a R$ 45)
+ */
+export function sanitizarEstadoParaMetricasReais(
+  estado: EstadoCompletoLanHouse
+): EstadoCompletoLanHouse {
+  // 1. Normaliza relógio: se avançou anos para o futuro ou timestamp inválido, alinha com horário de pico realista
+  const anoRelogio = new Date(estado.relogioIso).getFullYear();
+  if (anoRelogio > 2026 || isNaN(anoRelogio)) {
+    estado.relogioIso = '2026-04-21T15:30:00';
+  }
+  const agoraMs = new Date(estado.relogioIso).getTime();
+
+  // 2. Normaliza saldo de caixa para reserva operacional de LAN House (~R$ 6.850,00)
+  if (estado.caixaSaldo > 30000 || estado.caixaSaldo < 500) {
+    estado.caixaSaldo = 6850.0;
+  }
+
+  // 3. Reconcilia computadores 1:1 com o mapa físico (SLOTS_PC = exatamente 24 estações: 1..12 + VIP 13..18 + Deck 19..24)
+  const numerosValidosMapa = new Set(SLOTS_PC.map((s) => s.numero));
+  const vistos = new Set<number>();
+  const pcsReconciliados: Computador[] = [];
+  for (const pc of estado.computadores) {
+    if (!numerosValidosMapa.has(pc.numero) || vistos.has(pc.numero)) continue;
+    vistos.add(pc.numero);
+    const ehVip = pc.numero >= 13 && pc.numero <= 18;
+    const areaCanonica: AreaComputador = ehVip ? 'VIP' : 'COMUM';
+    pcsReconciliados.push({
+      ...pc,
+      area: areaCanonica,
+      identificacao: `${ehVip ? 'VIP' : 'PC'}-${String(pc.numero).padStart(2, '0')}`,
+      totalMinutosUso:
+        pc.totalMinutosUso > 1800 || pc.totalMinutosUso < 0
+          ? 160 + ((pc.numero * 23) % 360)
+          : pc.totalMinutosUso,
+    });
+  }
+  for (const slot of SLOTS_PC) {
+    if (!vistos.has(slot.numero)) {
+      const ehVip = slot.numero >= 13 && slot.numero <= 18;
+      pcsReconciliados.push({
+        numero: slot.numero,
+        identificacao: `${ehVip ? 'VIP' : 'PC'}-${String(slot.numero).padStart(2, '0')}`,
+        area: ehVip ? 'VIP' : 'COMUM',
+        categoria: ehVip ? 'VIP Station' : 'PC Gaming',
+        especificacoes: ehVip
+          ? 'Ryzen 7 7800X3D • 32GB • RTX 4080 • 240Hz'
+          : 'Ryzen 5 5600X • 16GB • RTX 3060',
+        precoPorHora: ehVip ? 18.0 : 12.0,
+        status: 'LIVRE',
+        sessaoAtivaId: null,
+        usuarioAtualNome: null,
+        manutencaoMotivo: null,
+        totalMinutosUso: 180 + ((slot.numero * 19) % 240),
+      });
+    }
+  }
+  pcsReconciliados.sort((a, b) => a.numero - b.numero);
+  estado.computadores = pcsReconciliados;
+
+  // 3b. Auto-migração: estacionamento pago, serviço nas melhorias e equipe de pátio/portaria
+  if (!estado.estacionamento) {
+    estado.estacionamento = {
+      tarifaBase: 10.0,
+      vagasTotais: 8,
+      totalVeiculosAtendidos: 14,
+      receitaEstacionamento: 140.0,
+      ultimosTickets: [
+        { id: 'TK-1014', placa: 'LAN-8G42', vagaId: 'V02', modeloCarro: 'Hatch', valor: 10.0, horario: '15:18' },
+        { id: 'TK-1013', placa: 'PIX-4090', vagaId: 'V05', modeloCarro: 'Sedan', valor: 10.0, horario: '14:52' },
+      ],
+    };
+  } else {
+    estado.estacionamento.vagasTotais = 8;
+    if (!Array.isArray(estado.estacionamento.ultimosTickets)) {
+      estado.estacionamento.ultimosTickets = [];
+    }
+  }
+
+  if (Array.isArray(estado.melhorias)) {
+    const mPcs = estado.melhorias.find((m) => m.id === 'eq_pcs');
+    if (mPcs) {
+      mPcs.nome = 'Bancadas Gamer RGB (24 Estações)';
+      mPcs.beneficio = 'Evolui conforto e placa nas 24 estações do mapa (PC-01..24)';
+    }
+    const mMon = estado.melhorias.find((m) => m.id === 'eq_monitor');
+    if (mMon) {
+      mMon.nome = 'Monitores 240Hz / 360Hz (6 VIPs)';
+      mMon.beneficio = 'Valoriza as 6 estações VIP do mapa (+reputação)';
+    }
+    if (!estado.melhorias.some((m) => m.id === 'srv_estacionamento')) {
+      estado.melhorias.push({
+        id: 'srv_estacionamento',
+        nome: 'Estacionamento Pago & Cancelas',
+        grupo: 'SERVICOS',
+        nivel: 1,
+        nivelMax: 1,
+        custoProximo: 0,
+        ativo: true,
+        icone: 'parking',
+        beneficio: '8 vagas com leitura automática, guarita e cancelas de fluxo',
+      });
+    }
+  }
+
+  const hashPadraoMigracao = gerarHashSenha('Lan@House2026');
+  const cargosPresentes = new Set(estado.funcionarios.map((f) => f.cargo));
+  if (!cargosPresentes.has('PORTEIRO_ESTACIONAMENTO')) {
+    const proxId = Math.max(0, ...estado.funcionarios.map((f) => f.id)) + 1;
+    estado.funcionarios.push({
+      id: proxId,
+      nome: 'Roberto Porteiro',
+      login: 'roberto.portaria',
+      senhaHash: hashPadraoMigracao,
+      cargo: 'PORTEIRO_ESTACIONAMENTO',
+      turno: 'MANHA',
+      humor: 'FELIZ',
+      trabalhandoAgora: true,
+      salario: 2050,
+      atendimentosRealizados: 24,
+      avatarSeed: 9,
+      permissoes: FABRICA_CARGOS.PORTEIRO_ESTACIONAMENTO.obterPermissoes(),
+    });
+  }
+  if (!cargosPresentes.has('GUARDA_PATIO')) {
+    const proxId = Math.max(0, ...estado.funcionarios.map((f) => f.id)) + 1;
+    estado.funcionarios.push({
+      id: proxId,
+      nome: 'Cabo Henrique',
+      login: 'henrique.patio',
+      senhaHash: hashPadraoMigracao,
+      cargo: 'GUARDA_PATIO',
+      turno: 'TARDE',
+      humor: 'FELIZ',
+      trabalhandoAgora: true,
+      salario: 2200,
+      atendimentosRealizados: 19,
+      avatarSeed: 10,
+      permissoes: FABRICA_CARGOS.GUARDA_PATIO.obterPermissoes(),
+    });
+  }
+
+  // 4. Normaliza sessões ativas e encerradas (teto operacional de 360 min)
+  estado.sessoes.forEach((s) => {
+    if (s.minutosUtilizados > 360 || s.valorTotal > 150) {
+      const minutosRealistas = 25 + ((s.id * 17) % 65); // 25 a 90 min
+      s.minutosUtilizados = minutosRealistas;
+      s.valorTempo = Number(((minutosRealistas / 60) * s.tarifaPorHoraCongelada).toFixed(2));
+
+      if (s.itensConsumo.length > 2 || s.valorConsumo > 50) {
+        s.itensConsumo = s.itensConsumo.slice(0, 1);
+        if (s.itensConsumo[0]) {
+          s.itensConsumo[0].quantidade = 1;
+          s.itensConsumo[0].subtotal = s.itensConsumo[0].precoUnitario;
+        }
+      }
+      s.valorConsumo = Number(
+        s.itensConsumo.reduce((acc, it) => acc + it.subtotal, 0).toFixed(2)
+      );
+      s.valorTotal = Number((s.valorTempo + s.valorConsumo).toFixed(2));
+
+      const tFim = s.fim ? new Date(s.fim).getTime() : agoraMs;
+      s.inicio = new Date(tFim - minutosRealistas * 60000).toISOString().slice(0, 19);
+      if (s.fim) {
+        s.fim = new Date(agoraMs).toISOString().slice(0, 19);
+      }
+    }
+  });
+
+  // 5. Normaliza pagamentos para manter métricas reais de faturamento
+  if (estado.pagamentos.length > 30 || estado.pagamentos.some((p) => p.valorFinal > 120)) {
+    const sessoesEncerradas = estado.sessoes.filter((s) => s.status === 'ENCERRADA');
+    const novas: Pagamento[] = [];
+    sessoesEncerradas.slice(0, 20).forEach((s, idx) => {
+      const forma: FormaPagamento = idx % 2 === 0 ? 'PIX' : idx % 3 === 0 ? 'DEBITO' : 'DINHEIRO';
+      const proc = PROCESSADORES_PAGAMENTO[forma];
+      const { desconto, valorFinal } = proc.calcularTotal(s.valorTotal);
+      novas.push({
+        id: 500 + idx + 1,
+        sessaoId: s.id,
+        clienteNome: s.clienteNome,
+        computadorNumero: s.computadorNumero,
+        valorBruto: s.valorTotal,
+        descontoAplicado: desconto,
+        valorFinal,
+        forma,
+        status: idx === 1 ? 'PENDENTE' : 'CONFIRMADO',
+        dataHora: s.fim || estado.relogioIso,
+        operadorRegistro: s.operadorAbertura || 'Ana Silva',
+        operadorConfirmacao: idx === 1 ? null : (s.operadorEncerramento || 'Ana Silva'),
+      });
+    });
+    estado.pagamentos = novas;
+  }
+
+  // 6. Normaliza fidelidade dos clientes
+  estado.clientes.forEach((c) => {
+    if (c.fidelidadePontos > 600) {
+      c.fidelidadePontos = 50 + ((c.id * 31) % 180);
+    }
+  });
+
+  // 7. Reconcilia PCs <-> Sessões Ativas (elimina PCs presos em OCUPADO sem sessão correspondente)
+  const ativasMapPorPc = new Map<number, Sessao>();
+  const clientesAtivosSet = new Set<number>();
+  estado.sessoes = estado.sessoes.map((s) => {
+    if (s.status === 'ATIVA') {
+      if (
+        s.computadorNumero >= 1 &&
+        s.computadorNumero <= 24 &&
+        !ativasMapPorPc.has(s.computadorNumero) &&
+        !clientesAtivosSet.has(s.clienteId)
+      ) {
+        ativasMapPorPc.set(s.computadorNumero, s);
+        clientesAtivosSet.add(s.clienteId);
+        return s;
+      }
+      return { ...s, status: 'ENCERRADA' as const, fim: s.fim || estado.relogioIso };
+    }
+    return s;
+  });
+  estado.computadores.forEach((c) => {
+    const sessaoPc = ativasMapPorPc.get(c.numero);
+    if (sessaoPc) {
+      c.status = 'OCUPADO';
+      c.sessaoAtivaId = sessaoPc.id;
+      c.usuarioAtualNome = sessaoPc.clienteNome;
+    } else if (c.status === 'OCUPADO') {
+      c.status = 'LIVRE';
+      c.sessaoAtivaId = null;
+      c.usuarioAtualNome = null;
+    }
+  });
+
+  // Garante que o Salão Gamer e a Arena nunca fiquem desertos: sempre mantém alta ocupação (~22 PCs ativos)
+  const ativas = estado.sessoes.filter((s) => s.status === 'ATIVA');
+  if (ativas.length < 21) {
+    const clientesEmUso = new Set(ativas.map((s) => s.clienteId));
+    const pcsCandidatos = estado.computadores.filter(
+      (c) => c.status === 'LIVRE' && c.numero !== 3 && c.numero <= 24
+    );
+    for (const pc of pcsCandidatos) {
+      if (estado.sessoes.filter((s) => s.status === 'ATIVA').length >= 22) break;
+      const clienteLivre = estado.clientes.find((cl) => !clientesEmUso.has(cl.id));
+      if (!clienteLivre) break;
+      clientesEmUso.add(clienteLivre.id);
+
+      const novoId = Math.max(100, ...estado.sessoes.map((s) => s.id)) + 1;
+      const minsIniciais = 20 + ((pc.numero * 11) % 55);
+      const nova: Sessao = {
+        id: novoId,
+        clienteId: clienteLivre.id,
+        clienteNome: clienteLivre.nome,
+        computadorNumero: pc.numero,
+        areaComputador: pc.area,
+        tarifaPorHoraCongelada: pc.precoPorHora,
+        inicio: estado.relogioIso || '2026-04-21T15:30:00',
+        fim: null,
+        minutosUtilizados: minsIniciais,
+        valorTempo: Number(((minsIniciais / 60) * pc.precoPorHora).toFixed(2)),
+        itensConsumo: [],
+        valorConsumo: 0,
+        valorTotal: Number(((minsIniciais / 60) * pc.precoPorHora).toFixed(2)),
+        status: 'ATIVA',
+        operadorAbertura: 'Ana Silva',
+        operadorEncerramento: null,
+        estoqueDevolvido: false,
+      };
+      pc.status = 'OCUPADO';
+      pc.sessaoAtivaId = nova.id;
+      pc.usuarioAtualNome = clienteLivre.nome;
+      estado.sessoes.unshift(nova);
+    }
+  }
+
+  return estado;
 }
 
 export class LanHouseStore {
@@ -907,8 +1560,39 @@ export class LanHouseStore {
           if (!parsed.computadores.some((c) => c.numero === 19)) {
             parsed.computadores = [...parsed.computadores, ...criarPcsDeck()];
           }
-          parsed.personagens = sincronizarPersonagensMapa(parsed);
-          return parsed;
+          // Migração única: saves com poucos clientes (<36) recebem elenco expandido e ocupação inicial nos PCs livres
+          if (!Array.isArray(parsed.clientes) || parsed.clientes.length < 36) {
+            const base = criarDadosIniciais();
+            const clientesExistentes = new Set((parsed.clientes ?? []).map((c) => c.id));
+            parsed.clientes = [
+              ...(parsed.clientes ?? []),
+              ...base.clientes.filter((c) => !clientesExistentes.has(c.id)),
+            ];
+            const ocupadosSet = new Set(
+              parsed.sessoes.filter((s) => s.status === 'ATIVA').map((s) => s.clienteId)
+            );
+            base.sessoes
+              .filter((s) => s.status === 'ATIVA' && !ocupadosSet.has(s.clienteId))
+              .forEach((sessaoPadrao) => {
+                const pc = parsed.computadores.find((c) => c.numero === sessaoPadrao.computadorNumero);
+                if (pc && pc.status === 'LIVRE') {
+                  const nextId = Math.max(100, ...parsed.sessoes.map((s) => s.id)) + 1;
+                  const nova = { ...sessaoPadrao, id: nextId, inicio: parsed.relogioIso || sessaoPadrao.inicio };
+                  pc.status = 'OCUPADO';
+                  pc.sessaoAtivaId = nova.id;
+                  pc.usuarioAtualNome = nova.clienteNome;
+                  parsed.sessoes = [nova, ...parsed.sessoes];
+                  ocupadosSet.add(nova.clienteId);
+                }
+              });
+          }
+          // Sanitização ativa de números inflados e tempos absurdos
+          const sanitizado = sanitizarEstadoParaMetricasReais(parsed);
+          sanitizado.personagens = sincronizarPersonagensMapa(sanitizado);
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitizado));
+          } catch {}
+          return sanitizado;
         }
       }
     } catch {
@@ -1069,12 +1753,25 @@ export class LanHouseStore {
       throw new RegraNegocioError('RF03', 'O preço por hora deve ser maior que zero.');
     }
 
-    const proximoNumero = Math.max(0, ...this.state.computadores.map((c) => c.numero)) + 1;
-    const prefixo = area === 'VIP' ? 'VIP' : 'PC';
+    if (this.state.computadores.length >= MAX_ESTACOES_MAPA) {
+      throw new RegraNegocioError(
+        'RF03',
+        `Capacidade física máxima do mapa atingida (${MAX_ESTACOES_MAPA}/${MAX_ESTACOES_MAPA} estações: PC-01..24). Utilize "Upgrade Hardware" para evoluir as máquinas existentes.`
+      );
+    }
+
+    const ocupados = new Set(this.state.computadores.map((c) => c.numero));
+    const slotLivre = SLOTS_PC.find((s) => !ocupados.has(s.numero));
+    const proximoNumero = slotLivre
+      ? slotLivre.numero
+      : Math.max(0, ...this.state.computadores.map((c) => c.numero)) + 1;
+    const ehVip = proximoNumero >= 13 && proximoNumero <= 18;
+    const areaReal: AreaComputador = ehVip ? 'VIP' : 'COMUM';
+    const prefixo = areaReal === 'VIP' ? 'VIP' : 'PC';
     const novo: Computador = {
       numero: proximoNumero,
       identificacao: `${prefixo}-${String(proximoNumero).padStart(2, '0')}`,
-      area,
+      area: areaReal,
       categoria,
       especificacoes: especificacoes.trim() || 'Ryzen 5 • 16GB RAM • RTX 4060',
       precoPorHora: Number(precoPorHora.toFixed(2)),
@@ -1165,6 +1862,67 @@ export class LanHouseStore {
     this.state.reputacao = Math.min(100, this.state.reputacao + 1);
     this.adicionarXp(80);
     this.registrarLog('SISTEMA', `Melhoria "${m.nome}" evoluída para Nível ${m.nivel}!`, 'Infraestrutura');
+    this.salvarEEmitir();
+  }
+
+  public registrarTicketEstacionamento(
+    placa: string,
+    vagaId: string,
+    modeloCarro: string,
+    valorPago?: number
+  ): RegistroTicketEstacionamento {
+    const srv = this.state.melhorias.find((m) => m.id === 'srv_estacionamento');
+    const tarifa = valorPago !== undefined ? valorPago : srv && !srv.ativo ? 0 : this.state.estacionamento.tarifaBase;
+    const valorFinal = Number(Math.max(0, tarifa).toFixed(2));
+    const seq = 1001 + this.state.estacionamento.totalVeiculosAtendidos;
+    const dt = new Date(this.state.relogioIso || Date.now());
+    const horario = Number.isNaN(dt.getTime())
+      ? '15:30'
+      : dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    const ticket: RegistroTicketEstacionamento = {
+      id: `TK-${seq}`,
+      placa,
+      vagaId,
+      modeloCarro,
+      valor: valorFinal,
+      horario,
+    };
+
+    this.state.estacionamento.totalVeiculosAtendidos += 1;
+    this.state.estacionamento.receitaEstacionamento = Number(
+      (this.state.estacionamento.receitaEstacionamento + valorFinal).toFixed(2)
+    );
+    this.state.estacionamento.ultimosTickets = [
+      ticket,
+      ...this.state.estacionamento.ultimosTickets.slice(0, 19),
+    ];
+    if (valorFinal > 0) {
+      this.state.caixaSaldo = Number((this.state.caixaSaldo + valorFinal).toFixed(2));
+      this.adicionarXp(8);
+    }
+
+    const porteiro = this.state.funcionarios.find(
+      (f) => f.trabalhandoAgora && (f.cargo === 'PORTEIRO_ESTACIONAMENTO' || f.cargo === 'GUARDA_PATIO')
+    );
+    if (porteiro) {
+      porteiro.atendimentosRealizados += 1;
+    }
+
+    this.registrarLog(
+      'PAGAMENTO',
+      `[Estacionamento] Ticket ${ticket.id} • ${placa} (${vagaId}) — Cancela liberada (+R$ ${valorFinal.toFixed(2)})`,
+      'Portaria'
+    );
+    this.salvarEEmitir();
+    return ticket;
+  }
+
+  public alterarTarifaEstacionamento(novaTarifa: number) {
+    this.exigirPermissao('GERENCIAR_COMPUTADOR', 'RN10');
+    const clamped = Number(Math.max(0, Math.min(50, novaTarifa)).toFixed(2));
+    this.state.estacionamento.tarifaBase = clamped;
+    this.registrarLog('SISTEMA', `Tarifa única do estacionamento ajustada para R$ ${clamped.toFixed(2)}`, 'Portaria');
     this.salvarEEmitir();
   }
 
@@ -1649,6 +2407,15 @@ export class LanHouseStore {
 
     const somaMinutos = sessoesPeriodo.reduce((acc, s) => acc + s.minutosUtilizados, 0);
 
+    // Métrica de Gasto Real: Ticket Médio real por cliente e por sessão auditada
+    const clientesUnicosCount = Math.max(1, new Set(confirmados.map((p) => p.clienteNome)).size);
+    const ticketMedioGastoReal = Number(
+      (faturamentoTotalConfirmado / clientesUnicosCount).toFixed(2)
+    );
+    const gastoMedioPorSessao = Number(
+      (faturamentoTotalConfirmado / Math.max(1, confirmados.length)).toFixed(2)
+    );
+
     return {
       periodoInicio: inicioIso || '2026-04-01',
       periodoFim: fimIso || '2026-04-30',
@@ -1660,6 +2427,8 @@ export class LanHouseStore {
       totalSessoesPeriodo: sessoesPeriodo.length,
       tempoMedioSessaoMinutos:
         sessoesPeriodo.length > 0 ? Math.round(somaMinutos / sessoesPeriodo.length) : 0,
+      ticketMedioGastoReal: ticketMedioGastoReal > 0 ? ticketMedioGastoReal : 24.8,
+      gastoMedioPorSessao: gastoMedioPorSessao > 0 ? gastoMedioPorSessao : 22.5,
       vendasBomboniereConfirmadas,
     };
   }
@@ -1681,16 +2450,38 @@ export class LanHouseStore {
     if (this.state.configuracoes.simulacaoAutomatica) {
       const min = novaData.getMinutes();
 
-      // A cada ~17 min simulados, um cliente livre pode abrir sessão automática se houver PC livre
-      if (min % 17 === 0) {
-        const pcsLivres = this.state.computadores.filter((c) => c.status === 'LIVRE');
+      // Reconcilia estado antes de alocar novas sessões (impede PC preso em OCUPADO sem sessão ativa)
+      const mapaAtivasPorPc = new Map<number, Sessao>();
+      this.state.sessoes.forEach((s) => {
+        if (s.status === 'ATIVA' && s.computadorNumero <= 24 && !mapaAtivasPorPc.has(s.computadorNumero)) {
+          mapaAtivasPorPc.set(s.computadorNumero, s);
+        }
+      });
+      this.state.computadores.forEach((c) => {
+        const s = mapaAtivasPorPc.get(c.numero);
+        if (!s && c.status === 'OCUPADO') {
+          c.status = 'LIVRE';
+          c.sessaoAtivaId = null;
+          c.usuarioAtualNome = null;
+        }
+      });
+
+      // Mantém o Salão Gamer e VIP altamente ocupados (~22 de 24 PCs ativos) e com clientes chegando para jogar
+      const pcsLivres = this.state.computadores.filter(
+        (c) => c.status === 'LIVRE' && c.numero !== 3 && c.numero <= 24
+      );
+      if (pcsLivres.length > 0) {
         const clientesOcupados = new Set(
           this.state.sessoes.filter((s) => s.status === 'ATIVA').map((s) => s.clienteId)
         );
-        const clienteDisponivel = this.state.clientes.find((c) => !clientesOcupados.has(c.id));
+        for (const pcEscolhido of pcsLivres) {
+          if (this.state.sessoes.filter((s) => s.status === 'ATIVA').length >= 22) break;
+          const candidatosClientes = this.state.clientes.filter((c) => !clientesOcupados.has(c.id));
+          if (candidatosClientes.length === 0) break;
+          const clienteDisponivel =
+            candidatosClientes[(min + pcEscolhido.numero + this.state.sessoes.length) % candidatosClientes.length];
+          clientesOcupados.add(clienteDisponivel.id);
 
-        if (pcsLivres.length > 2 && clienteDisponivel) {
-          const pcEscolhido = pcsLivres[min % pcsLivres.length];
           const novoId = Math.max(100, ...this.state.sessoes.map((s) => s.id)) + 1;
           const novaSessao: Sessao = {
             id: novoId,
@@ -1714,7 +2505,9 @@ export class LanHouseStore {
           pcEscolhido.status = 'OCUPADO';
           pcEscolhido.sessaoAtivaId = novaSessao.id;
           pcEscolhido.usuarioAtualNome = clienteDisponivel.nome;
-          this.state.sessoes = [novaSessao, ...this.state.sessoes];
+          const ativasAtuais = this.state.sessoes.filter((s) => s.status === 'ATIVA');
+          const encerradasAtuais = this.state.sessoes.filter((s) => s.status !== 'ATIVA').slice(0, 45);
+          this.state.sessoes = [novaSessao, ...ativasAtuais, ...encerradasAtuais];
           this.registrarLog(
             'SESSAO',
             `[Simulação] ${clienteDisponivel.nome} iniciou Sessão #${novaSessao.id} no ${pcEscolhido.identificacao}`,
@@ -1723,10 +2516,10 @@ export class LanHouseStore {
         }
       }
 
-      // A cada ~29 min simulados, uma sessão longa (>95 min) encerra e paga via Pix automaticamente
-      if (min % 29 === 0) {
+      // A cada ~7 min simulados, encerra uma sessão longa (>= 55 min) no Pix, abrindo rotatividade real nos PCs
+      if (min % 7 === 0) {
         const sessaoLonga = this.state.sessoes.find(
-          (s) => s.status === 'ATIVA' && s.minutosUtilizados >= 95
+          (s) => s.status === 'ATIVA' && s.minutosUtilizados >= 55
         );
         if (sessaoLonga) {
           sessaoLonga.fim = this.state.relogioIso;
@@ -1739,7 +2532,7 @@ export class LanHouseStore {
             pc.status = 'LIVRE';
             pc.sessaoAtivaId = null;
             pc.usuarioAtualNome = null;
-            pc.totalMinutosUso += sessaoLonga.minutosUtilizados;
+            pc.totalMinutosUso = Math.min(1800, pc.totalMinutosUso + sessaoLonga.minutosUtilizados);
           }
 
           const { desconto, valorFinal } = PROCESSADORES_PAGAMENTO.PIX.calcularTotal(
@@ -1761,7 +2554,7 @@ export class LanHouseStore {
               operadorRegistro: 'Ana Silva (Auto)',
               operadorConfirmacao: 'Ana Silva (Auto)',
             },
-            ...this.state.pagamentos,
+            ...this.state.pagamentos.slice(0, 29),
           ];
           this.state.caixaSaldo = Number((this.state.caixaSaldo + valorFinal).toFixed(2));
           this.adicionarXp(35);
@@ -1788,11 +2581,11 @@ export class LanHouseStore {
     const lista: Omit<Conquista, 'resgatada'>[] = [
       {
         id: 'ach_milhao',
-        titulo: 'Primeiro Milhão',
-        descricao: 'Acumule R$ 60.000,00 em saldo de caixa na LAN House',
+        titulo: 'Reserva de Ouro',
+        descricao: 'Acumule R$ 15.000,00 em saldo de caixa na LAN House',
         categoria: 'FINANCEIRO',
-        atual: Math.min(60000, Math.round(this.state.caixaSaldo)),
-        meta: 60000,
+        atual: Math.min(15000, Math.round(this.state.caixaSaldo)),
+        meta: 15000,
         recompensaXp: 500,
         recompensaDinheiro: 2500,
       },

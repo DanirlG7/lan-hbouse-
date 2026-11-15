@@ -13,7 +13,9 @@ export type CargoFuncionario =
   | 'RECEPCIONISTA'
   | 'SUPORTE_TECNICO'
   | 'LIMPEZA'
-  | 'DESENVOLVEDOR';
+  | 'DESENVOLVEDOR'
+  | 'PORTEIRO_ESTACIONAMENTO'
+  | 'GUARDA_PATIO';
 
 export type Turno = 'MANHA' | 'TARDE' | 'NOITE';
 
@@ -39,7 +41,8 @@ export type SetorMapa =
   | 'AREA_VIP'
   | 'BOMBONIERE'
   | 'MANUTENCAO'
-  | 'ESCRITORIO';
+  | 'ESCRITORIO'
+  | 'ESTACIONAMENTO';
 
 export interface Cliente {
   id: number;
@@ -212,6 +215,8 @@ export interface RelatorioFinanceiro {
   porForma: Record<FormaPagamento, number>;
   totalSessoesPeriodo: number;
   tempoMedioSessaoMinutos: number;
+  ticketMedioGastoReal: number; // Média real de gasto por cliente atendido (Ticket Médio)
+  gastoMedioPorSessao: number; // Média de gasto real por sessão
   vendasBomboniereConfirmadas: number;
 }
 
@@ -223,7 +228,7 @@ export interface MelhoriaEstabelecimento {
   nivelMax: number;
   custoProximo: number;
   ativo: boolean;
-  icone: 'electrical' | 'cctv' | 'ac' | 'pc' | 'printer' | 'console' | 'monitor';
+  icone: 'electrical' | 'cctv' | 'ac' | 'pc' | 'printer' | 'console' | 'monitor' | 'parking';
   beneficio: string;
 }
 
@@ -237,4 +242,22 @@ export type ModalAtivo =
   | 'ESTATISTICAS'
   | 'CONQUISTAS'
   | 'CONFIGURACOES'
-  | 'LOGIN';
+  | 'LOGIN'
+  | 'ESTACIONAMENTO';
+
+export interface RegistroTicketEstacionamento {
+  id: string;
+  placa: string;
+  vagaId: string;
+  modeloCarro: string;
+  valor: number;
+  horario: string;
+}
+
+export interface EstadoEstacionamento {
+  tarifaBase: number;
+  vagasTotais: number;
+  totalVeiculosAtendidos: number;
+  receitaEstacionamento: number;
+  ultimosTickets: RegistroTicketEstacionamento[];
+}
