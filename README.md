@@ -1,7 +1,7 @@
 # 🎮 LAN House & Arena Pixel Art — Simulador de Gestão em POO
 
 <p align="center">
-  <img src="./docs/screenshots/01_hud_simulacao_8x.png" alt="LAN House & Arena Pixel Art — HUD completo em simulação 8x" width="100%" />
+  <img src="./docs/screenshots/01_hud_simulacao_8x.jpg" alt="LAN House & Arena Pixel Art — HUD completo em simulação 8x" width="100%" />
 </p>
 
 <p align="center">
@@ -42,7 +42,7 @@ Simulador completo de **LAN House & Arena Gamer** em **Pixel Art Dark-Neon**, de
 - **Controle Temporal & Áudio:** Aceleração em `1x`, `3x`, `8x` e botão **`+15m`** para validar cronômetros e faturamento (`RF07` / `RN04`), além de efeitos sonoros sintetizados em `src/audio/soundEffects.ts`.
 
 <p align="center">
-  <img src="./docs/screenshots/02_mapa_sem_hud.png" alt="Visão panorâmica do mapa 96x64 com HUD oculto" width="88%" />
+  <img src="./docs/screenshots/02_mapa_sem_hud.jpg" alt="Visão panorâmica do mapa 96x64 com HUD oculto" width="88%" />
   <br />
   <em>Modo panorâmico ativado pelo atalho <code>[H]</code> exibindo os salões gamer, lojas, lounges e pátio automatizado.</em>
 </p>
@@ -229,17 +229,17 @@ Todas as telas abaixo foram capturadas diretamente da simulação executada ao v
 
 | Módulo / Aba | Captura Real da Simulação | Destaques Observados |
 | :--- | :---: | :--- |
-| **Computadores & Telemetria** | ![Computadores](./docs/screenshots/03_computadores_sessoes.png) | `24/24` estações (`22 em uso / 92%`), `PC-03` em manutenção, `R$ 286,00/h`, Sessão `#236` (`68°C / 340W`). |
-| **Clientes & Caixa PIX** | ![Caixa PIX](./docs/screenshots/05_clientes_caixa_pix.png) | Polimorfismo PIX: `6h @ R$ 8,00/h = R$ 48,00` com `5% OFF (-R$ 2,40)` → **`R$ 45,60`** (`#647 CONFIRMADO`). |
-| **Loja & Bomboniere** | ![Loja](./docs/screenshots/04_loja_bomboniere.png) | Composição `Sessao → ItemConsumacao → Produto`, estoque `R$ 2.728,00`, entrega direta ao `PC-01`. |
-| **Melhorias & Serviços** | ![Melhorias](./docs/screenshots/06_melhorias_infra.png) | Evolução por nível (`INFRAESTRUTURA`, `EQUIPAMENTOS`, `SERVICOS`) e toggle `srv_estacionamento` ativo. |
-| **Estacionamento & Cancelas** | ![Estacionamento](./docs/screenshots/07_estacionamento_cancelas.png) | Vagas `V01–V08` (`3/8` livres), cancelas `ABERTA (100%)`, `401 tickets` (`R$ 4.010,00`), ticket `TK-1401`. |
-| **Equipe & Funcionários** | ![Equipe](./docs/screenshots/08_equipe_funcionarios.png) | `8/10 Funcionários Ativos` em turno (`Folha: R$ 25.650,00`), incluindo `Porteiro do Estac.` e `Guarda`. |
-| **Hierarquia `PerfilCargoPOO`** | ![Hierarquia POO](./docs/screenshots/13_hierarquia_cargos_poo.png) | Sub-aba renderizando na UI a herança `extends Funcionario` das 7 subclasses e suas permissões. |
-| **Login & Controle RBAC** | ![Login RNF02](./docs/screenshots/09_login_operador_rnf02.png) | Hash PBKDF2 (`RNF02`), barreira `exigirPermissao()` e **Troca Rápida de Cargo (`RN10`)** ao vivo. |
-| **Estatísticas & Auditoria** | ![Estatísticas RN09](./docs/screenshots/10_estatisticas_rn09.png) | Power BI em tempo real: `356` clientes, `92%` ocupação, ticket médio `R$ 152,00`, `5h 55m` e `RN09`. |
-| **Conquistas (Observer)** | ![Conquistas](./docs/screenshots/12_conquistas_resgate.png) | `6/7 (86%)` metas concluídas, `2250 XP`, Lv. 17 e resgate de recompensas atualizando o caixa ao vivo. |
-| **Configurações (`RNF06`)** | ![Configurações](./docs/screenshots/11_configuracoes_rnf06.png) | Persistência automática no `localStorage`, exportação/importação `.JSON` e restauração inicial. |
+| **Computadores & Telemetria** | ![Computadores](./docs/screenshots/03_computadores_sessoes.jpg) | `24/24` estações (`22 em uso / 92%`), `2 livres`, `0 bloqueados`, `R$ 356,00/h`, Sessão `#1657 — Juliana Alves` (`68°C / 340W`). |
+| **Clientes & Caixa PIX** | ![Caixa PIX](./docs/screenshots/05_clientes_caixa_pix.jpg) | Polimorfismo PIX: `6h @ R$ 8,00/h = R$ 48,00` com `5% OFF (-R$ 2,40)` → **`R$ 45,60`** (`#647 CONFIRMADO`). |
+| **Loja & Bomboniere** | ![Loja](./docs/screenshots/04_loja_bomboniere.jpg) | Composição `Sessao → ItemConsumacao → Produto`, estoque `R$ 15.001,50` (`Café 134 un.`), entrega para `Lucas Silveira (PC-22)`. |
+| **Melhorias & Serviços** | ![Melhorias](./docs/screenshots/06_melhorias_infra.jpg) | Evolução por nível (`INFRAESTRUTURA`, `EQUIPAMENTOS`, `SERVICOS`) e toggle `srv_estacionamento` ativo. |
+| **Estacionamento & Cancelas** | ![Estacionamento](./docs/screenshots/07_estacionamento_cancelas.jpg) | Vagas `V01–V08` (`3/8` livres), cancelas `ABERTA (100%)`, `401 tickets` (`R$ 4.010,00`), ticket `TK-1401`. |
+| **Equipe & Funcionários** | ![Equipe](./docs/screenshots/08_equipe_funcionarios.jpg) | `8/10 Funcionários Ativos` em turno (`Folha: R$ 25.650,00`), incluindo `Porteiro do Estac.` e `Guarda`. |
+| **Hierarquia `PerfilCargoPOO`** | ![Hierarquia POO](./docs/screenshots/13_hierarquia_cargos_poo.jpg) | Sub-aba renderizando na UI a herança `extends Funcionario` das 7 subclasses e suas permissões. |
+| **Login & Controle RBAC** | ![Login RNF02](./docs/screenshots/09_login_operador_rnf02.jpg) | Hash PBKDF2 (`RNF02`), barreira `exigirPermissao()` e **Troca Rápida de Cargo (`RN10`)** ao vivo. |
+| **Estatísticas & Auditoria** | ![Estatísticas RN09](./docs/screenshots/10_estatisticas_rn09.jpg) | Power BI em tempo real: `356` clientes, `92%` ocupação, faturamento `R$ 1.710,00 (30 conf.)`, ticket médio `R$ 190,00`, `5h 55m`. |
+| **Conquistas (Observer)** | ![Conquistas](./docs/screenshots/12_conquistas_resgate.jpg) | `6/7 (86%)` metas concluídas, `2250 XP`, Lv. 17 e resgate de recompensas atualizando o caixa ao vivo. |
+| **Configurações (`RNF06`)** | ![Configurações](./docs/screenshots/11_configuracoes_rnf06.jpg) | Persistência automática no `localStorage`, exportação/importação `.JSON` e restauração inicial. |
 
 </details>
 
