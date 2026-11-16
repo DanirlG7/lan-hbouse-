@@ -27,7 +27,7 @@ Simulador completo de **LAN House & Arena Gamer** em **Pixel Art Dark-Neon**, de
 - [Galeria de Telas & Evidências Reais](#-galeria-de-telas--evidências-reais)
 - [Atalhos de Teclado e Controles](#-atalhos-de-teclado-e-controles)
 - [Como Executar o Projeto](#-como-executar-o-projeto)
-- [Integração Opcional com Backend Java (JDK 17)](#-integração-opcional-com-backend-java-jdk-17)
+- [Backend Java Completo (`backend-java/`, JDK 17+)](#-backend-java-completo-backend-java-jdk-17)
 - [Estrutura do Repositório](#-estrutura-do-repositório)
 - [Material de Apresentação](#-material-de-apresentação)
 
@@ -292,19 +292,23 @@ Acesse **`http://localhost:5173`** no navegador.
 
 ---
 
-## ☕ Integração Opcional com Backend Java (`JDK 17`)
+## ☕ Backend Java Completo (`backend-java/`, JDK 17+)
 
-O adaptador [`java-bridge/ServidorHttpLanHouse.java`](./java-bridge/ServidorHttpLanHouse.java) utiliza exclusivamente o `com.sun.net.httpserver.HttpServer` nativo do **JDK 17** (zero dependências externas ou Maven), expondo a fachada `JogoLanHouse` na porta **`8080`**:
+Além do motor POO em TypeScript usado no navegador, o repositório inclui o **projeto Java completo** da disciplina em [`backend-java/`](./backend-java) (arquitetura `controller → service → model → repository`, simulador de um dia inteiro, barramento de eventos, testes automatizados e o servidor HTTP [`ServidorHttpLanHouse.java`](./backend-java/src/lanhouse/web/ServidorHttpLanHouse.java) já integrado na porta **`8080`** usando apenas `com.sun.net.httpserver.HttpServer`, sem dependências externas).
 
-1. Copie `java-bridge/ServidorHttpLanHouse.java` para `lanhouse/src/lanhouse/web/ServidorHttpLanHouse.java` no projeto Java.
-2. Compile com `compilar.bat` e execute:
-   ```bash
-   java -cp out lanhouse.web.ServidorHttpLanHouse
-   ```
-3. Endpoints expostos com suporte a CORS:
-   - `GET /api/health` — Verifica status do motor `JogoLanHouse-JDK17` e relógio simulado.
-   - `GET /api/avancar` — Avança a simulação Java e retorna o resumo (`passos`, `terminou`, `sessoes`, `atendidos`, `itensVendidos`).
-   - `GET /api/eventos` — Lista os últimos 20 eventos registrados pelo motor.
+### Como compilar, testar e rodar o Backend Java
+
+| Ação | Windows (`.bat`) | Linux / Mac (`.sh`) |
+| :--- | :--- | :--- |
+| **Compilar tudo (`Main` + HTTP Bridge)** | `cd backend-java && compilar.bat` | `cd backend-java && ./compilar.sh` |
+| **Executar testes automatizados** | `cd backend-java && testar.bat` | `cd backend-java && ./testar.sh` |
+| **Subir servidor HTTP (porta `8080`)** | `cd backend-java && servidor-web.bat` | `cd backend-java && ./servidor-web.sh` |
+| **Menu CLI / Demo / Simulação** | `cd backend-java && executar.bat --simular` | `cd backend-java && ./executar.sh --simular` |
+
+**Endpoints expostos em `http://localhost:8080` com suporte a CORS:**
+- `GET /api/health` — Verifica status do motor `JogoLanHouse-JDK17` e relógio simulado.
+- `GET /api/avancar` — Avança a simulação Java e retorna o resumo (`passos`, `terminou`, `sessoes`, `atendidos`, `itensVendidos`).
+- `GET /api/eventos` — Lista os últimos 20 eventos registrados pelo motor.
 
 ---
 
@@ -312,12 +316,19 @@ O adaptador [`java-bridge/ServidorHttpLanHouse.java`](./java-bridge/ServidorHttp
 
 ```text
 lanhouse-pixel-web/
+├── backend-java/                       # Backend Java completo (POO em camadas, testes e API HTTP JDK 17+)
+│   ├── src/lanhouse/                   # controller, service, repository, model, fachada, simulacao, web
+│   ├── teste/lanhouse/teste/           # Suíte de testes automatizados (ExecutarTestes)
+│   ├── compilar.bat / compilar.sh      # Compilação UTF-8 para out/
+│   ├── testar.bat / testar.sh          # Execução da suíte Java de testes
+│   ├── executar.bat / executar.sh      # CLI interativo, --demo e --simular
+│   └── servidor-web.bat / .sh          # Servidor HTTP JSON nativo na porta 8080
 ├── docs/
 │   ├── screenshots/                    # 13 capturas reais da simulação no navegador
 │   ├── LanHouse_POO_Apresentacao.pptx  # Apresentação PowerPoint pronta (14 slides)
 │   └── ROTEIRO_SLIDES_POO.md           # Roteiro completo, UML e resultados da simulação
 ├── java-bridge/
-│   └── ServidorHttpLanHouse.java       # Adaptador HTTP JDK 17 opcional (porta 8080)
+│   └── ServidorHttpLanHouse.java       # Cópia de referência do adaptador HTTP JDK 17+ (porta 8080)
 ├── public/assets/                      # Assets estáticos de mapa
 ├── src/
 │   ├── audio/

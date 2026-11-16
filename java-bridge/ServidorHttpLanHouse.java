@@ -12,12 +12,11 @@ import lanhouse.fachada.JogoLanHouse;
 import lanhouse.simulacao.ResumoDoDia;
 
 /**
- * Adaptador HTTP nativo do JDK 17 (zero dependências externas) que expõe a fachada
+ * Adaptador HTTP nativo do JDK 17+ (zero dependências externas) que expõe a fachada
  * JogoLanHouse via JSON para o Front-end Web React Pixel Art na porta 8080.
  *
- * Para usar no projeto Java existente:
- * 1. Copie este arquivo para: lanhouse/src/lanhouse/web/ServidorHttpLanHouse.java
- * 2. Compile com compilar.bat e rode: java -cp out lanhouse.web.ServidorHttpLanHouse
+ * Nota: este arquivo também já vem integrado em backend-java/src/lanhouse/web/ServidorHttpLanHouse.java
+ * (use backend-java\servidor-web.bat ou ./servidor-web.sh para subir direto na porta 8080).
  */
 public final class ServidorHttpLanHouse {
 
@@ -52,7 +51,7 @@ public final class ServidorHttpLanHouse {
                 if (i > 0) sb.append(",");
                 sb.append("{\"seq\":").append(e.sequencia())
                   .append(",\"tipo\":\"").append(escapar(e.tipo())).append("\"")
-                  .append(",\"descricao\":\"").append(escapar(e.descricao())).append("\"}");
+                  .append(",\"descricao\":\"").append(escapar(e.texto())).append("\"}");
             }
             sb.append("]");
             responderJson(exchange, 200, sb.toString());
